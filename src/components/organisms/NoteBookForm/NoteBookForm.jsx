@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styles from './NoteBookForm.module.scss';
 import { X } from 'lucide-react';
 
@@ -11,6 +11,8 @@ const NotebookForm = ({ onClose }) => {
     isCustomColor: false
   });
 
+  const formRef = useRef(null);
+
   const presetColors = [
     { color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)' },
     { color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)' },
@@ -21,6 +23,18 @@ const NotebookForm = ({ onClose }) => {
     { color: '#14b8a6', gradient: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)' },
     { color: '#f97316', gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)' }
   ];
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -63,11 +77,16 @@ const NotebookForm = ({ onClose }) => {
   };
 
   return (
-    <div className={styles.notebookFormContainer}>
+    <div className={styles.notebookFormContainer} ref={formRef}>
       <div className={styles.formHeader}>
         <h2 className={styles.formTitle}>Create New Notebook</h2>
-        <button className={styles.closeButton} onClick={onClose} aria-label="Close">
-          <X size={20} />
+        <button 
+          type="button"
+          className={styles.closeButton} 
+          onClick={onClose} 
+          aria-label="Close"
+        >
+          <X size={18} />
         </button>
       </div>
       
@@ -91,19 +110,22 @@ const NotebookForm = ({ onClose }) => {
           
           <div className={styles.formGroup}>
             <label className={styles.formLabel} htmlFor="pages">
-              Pages: <span className={styles.pagesValue}>{formData.pages}</span>
+              Pages
             </label>
-            <input
-              type="range"
-              id="pages"
-              name="pages"
-              value={formData.pages}
-              onChange={handleInputChange}
-              className={styles.rangeInput}
-              min="50"
-              max="500"
-              step="10"
-            />
+            <div className={styles.rangeContainer}>
+              <input
+                type="range"
+                id="pages"
+                name="pages"
+                value={formData.pages}
+                onChange={handleInputChange}
+                className={styles.rangeInput}
+                min="50"
+                max="500"
+                step="10"
+              />
+              <span className={styles.pagesValue}>{formData.pages}</span>
+            </div>
           </div>
         </div>
 
@@ -146,6 +168,7 @@ const NotebookForm = ({ onClose }) => {
                 type="color"
                 value={formData.color}
                 onChange={handleCustomColor}
+                className={styles.colorInput}
               />
             </div>
             <span className={styles.customColorLabel}>

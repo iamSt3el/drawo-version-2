@@ -30,13 +30,6 @@ const Header = () => {
     };
   }, [showForm]);
 
-  // Close modal when clicking on overlay
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      handleCloseForm();
-    }
-  };
-
   return (
     <>
       <div className={styles.header_cover}>
@@ -55,7 +48,15 @@ const Header = () => {
 
       {/* Conditionally render the form */}
       {showForm && (
-        <div className={styles.formOverlay} onClick={handleOverlayClick}>
+        <div 
+          className={styles.formOverlay}
+          onMouseDown={(e) => {
+            // Only close if clicking directly on the overlay (not its children)
+            if (e.target === e.currentTarget) {
+              handleCloseForm();
+            }
+          }}
+        >
           <div className={styles.formContainer}>
             <NotebookForm onClose={handleCloseForm} />
           </div>
