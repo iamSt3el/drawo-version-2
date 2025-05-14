@@ -1,0 +1,33 @@
+// Header cover layout
+.header_cover {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 1rem;
+    padding: 10px;
+
+    .header_searchBar {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        max-width: 600px;
+        margin: 0 2rem;
+    }
+
+    .header_title {
+        flex-shrink: 0;
+
+        h1 {
+            margin: 0;
+        }
+    }
+
+    .header_button {
+        flex-shrink: 0;
+        padding-right: 20px;
+    }
+
+}

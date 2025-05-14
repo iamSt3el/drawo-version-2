@@ -1,0 +1,114 @@
+.notebook_card {
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  // Hover effect for the entire card
+  &:hover {
+    transform: translateY(-5px);
+    
+    .notebook_card_cover {
+      box-shadow: 
+        6px 5px 0px 0px rgba(127, 85, 177, 0.63),
+        12px 10px 0px -2px rgba(127, 85, 177, 0.63),
+        0 15px 35px rgba(139, 92, 246, 0.2);
+      
+      .notebook_card_holes {
+        box-shadow: 
+          inset 3px 2px 0px 0px rgba(0, 0, 0, 0.25),
+          0 1px 2px rgba(255, 255, 255, 0.3);
+      }
+    }
+  }
+    
+    .notebook_card_cover {
+      display: flex;
+      flex-direction: row;
+      background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 50%, #6D28D9 100%);
+      height: 320px;
+      width: 290px;
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+      box-shadow: 4.5px 4px 0px 0px rgba(127, 85, 177, 0.63),
+                  9px 8px 0px -2px rgba(127, 85, 177, 0.63);
+      
+      .notebook_card_hole_div {
+        width: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-top: 8px;
+        padding-left: 5px;
+        flex-shrink: 0; // Prevents shrinking
+        
+        .notebook_card_holes {
+          background-color: white;
+          height: 10px;
+          width: 10px;
+          border-radius: 30px;
+          box-shadow: inset 3px 2px 0px 0px rgba(0, 0, 0, 0.25);
+        }
+      }
+      
+      .notebook_card_content {
+        flex: 1; // This takes all remaining space
+        display: flex;
+        flex-direction: column; // Add this if you want vertical layout
+        
+        .notebook_card_date {
+          align-self: flex-end;
+          font-size: 12px;
+          margin: 10px;
+          
+          h4 {
+            margin: 0;
+          }
+        }
+      }
+    }
+  }
+  
+  // Move checkmark outside (it seems misplaced)
+  .checkmark {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    
+    &:after {
+      content: "";
+      position: absolute;
+      right: 25px;
+      top: -5px;
+      width: 13px;
+      height: 14px;
+      border: 3px solid black;
+      border-top: none;
+      border-radius: 0 0 20px 20px;
+      transform: rotate(40deg);
+    }
+  }
+  
+  .notebook_card_title {
+    align-self: center;
+    
+    h2 {
+      margin: 0;
+    }
+  }
+  
+  .notebook_card_description {
+    margin-top: 20px;
+    margin-left: 10px;
+    flex: 1;
+    
+    p {
+      margin: 0;
+    }
+  }
+  
+  .notebook_card_progress_content {
+    margin-left: 10px;
+    margin-right: 10px;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }

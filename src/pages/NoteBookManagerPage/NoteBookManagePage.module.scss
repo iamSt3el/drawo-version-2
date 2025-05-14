@@ -1,0 +1,43 @@
+.notebook_manager {
+  padding: 20px;
+  padding-top: 100px; /* Space for fixed header */
+  
+  h1 {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  
+  .notebook_manager_header {
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: white;
+    z-index: 1000;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .notebook_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 40px;
+    margin-bottom: 30px;
+  }
+  
+  button {
+    display: block;
+    margin: 0 auto;
+    padding: 10px 20px;
+    background-color: #7F55B1;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    
+    &:hover {
+      background-color: #6A3D9A;
+    }
+  }
+}
