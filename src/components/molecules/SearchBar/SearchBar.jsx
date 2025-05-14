@@ -1,20 +1,27 @@
 // SearchBar.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import styles from './SearchBar.module.scss';
+import { useNotebooks } from '../../../context/NotebookContext';
 
-const SearchBar = ({ onSearch, placeholder = "Search your notebooks..." }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+const SearchBar = ({ placeholder = "Search your notebooks..." }) => {
+  const { searchQuery, updateSearchQuery } = useNotebooks();
+  const [localQuery, setLocalQuery] = useState(searchQuery);
+
+  // Sync local state with context
+  useEffect(() => {
+    setLocalQuery(searchQuery);
+  }, [searchQuery]);
 
   const handleSearchChange = (e) => {
     const value = e.target.value;
-    setSearchQuery(value);
-    onSearch && onSearch(value);
+    setLocalQuery(value);
+    updateSearchQuery(value);
   };
 
   const clearSearch = () => {
-    setSearchQuery('');
-    onSearch && onSearch('');
+    setLocalQuery('');
+    updateSearchQuery('');
   };
 
   return (
@@ -24,13 +31,13 @@ const SearchBar = ({ onSearch, placeholder = "Search your notebooks..." }) => {
         
         <input
           type="text"
-          value={searchQuery}
+          value={localQuery}
           onChange={handleSearchChange}
           placeholder={placeholder}
           className={styles.searchInput}
         />
         
-        {searchQuery && (
+        {localQuery && (
           <button
             onClick={clearSearch}
             className={styles.clearButton}

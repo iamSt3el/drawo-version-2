@@ -48,19 +48,7 @@ const Header = () => {
 
       {/* Conditionally render the form */}
       {showForm && (
-        <div 
-          className={styles.formOverlay}
-          onMouseDown={(e) => {
-            // Only close if clicking directly on the overlay (not its children)
-            if (e.target === e.currentTarget) {
-              handleCloseForm();
-            }
-          }}
-        >
-          <div className={styles.formContainer}>
-            <NotebookForm onClose={handleCloseForm} />
-          </div>
-        </div>
+        <NotebookForm onClose={handleCloseForm} />
       )}
     </>
   )
