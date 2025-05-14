@@ -6,6 +6,10 @@ import { useNotebooks } from '../../../context/NotebookContext';
 const NotebookForm = ({ onClose }) => {
   const { addNotebook } = useNotebooks();
   
+  // Character limits for title and description
+  const TITLE_MAX_LENGTH = 30;
+  const DESCRIPTION_MAX_LENGTH = 120;
+  
   // Initialize form data with a function to ensure fresh state each time
   const getInitialFormData = () => ({
     title: '',
@@ -34,6 +38,16 @@ const NotebookForm = ({ onClose }) => {
   useEffect(() => {
     setFormData(getInitialFormData());
     setIsSubmitting(false);
+    
+    // Focus on the first input after a short delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const titleInput = document.getElementById('title');
+      if (titleInput) {
+        titleInput.focus();
+      }
+    }, 100);
+    
+    return () => clearTimeout(timer);
   }, []); // Empty dependency array means this runs only on mount
 
   // Close modal on Escape key
@@ -56,8 +70,13 @@ const NotebookForm = ({ onClose }) => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    // Add a delay before adding the event listener to prevent immediate closing
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+    
     return () => {
+      clearTimeout(timer);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [onClose]);
@@ -71,9 +90,18 @@ const NotebookForm = ({ onClose }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
+    // Apply character limits
+    let finalValue = value;
+    if (name === 'title' && value.length > TITLE_MAX_LENGTH) {
+      finalValue = value.slice(0, TITLE_MAX_LENGTH);
+    } else if (name === 'description' && value.length > DESCRIPTION_MAX_LENGTH) {
+      finalValue = value.slice(0, DESCRIPTION_MAX_LENGTH);
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: finalValue
     }));
   };
 
@@ -150,6 +178,12 @@ const NotebookForm = ({ onClose }) => {
             <div className={styles.formGroup}>
               <label className={styles.formLabel} htmlFor="title">
                 Notebook Title
+                <span className={`${styles.characterCount} ${
+                  formData.title.length > TITLE_MAX_LENGTH * 0.9 ? styles.danger : 
+                  formData.title.length > TITLE_MAX_LENGTH * 0.8 ? styles.warning : ''
+                }`}>
+                  {formData.title.length}/{TITLE_MAX_LENGTH}
+                </span>
               </label>
               <input
                 type="text"
@@ -161,7 +195,7 @@ const NotebookForm = ({ onClose }) => {
                 placeholder="e.g., Data Structures & Algorithms"
                 required
                 disabled={isSubmitting}
-                key="title-input" // Force re-render when needed
+                maxLength={TITLE_MAX_LENGTH}
               />
             </div>
             
@@ -190,6 +224,12 @@ const NotebookForm = ({ onClose }) => {
           <div className={styles.formGroup}>
             <label className={styles.formLabel} htmlFor="description">
               Description
+              <span className={`${styles.characterCount} ${
+                formData.description.length > DESCRIPTION_MAX_LENGTH * 0.9 ? styles.danger : 
+                formData.description.length > DESCRIPTION_MAX_LENGTH * 0.8 ? styles.warning : ''
+              }`}>
+                {formData.description.length}/{DESCRIPTION_MAX_LENGTH}
+              </span>
             </label>
             <textarea
               id="description"
@@ -200,7 +240,7 @@ const NotebookForm = ({ onClose }) => {
               placeholder="Describe what this notebook is about..."
               required
               disabled={isSubmitting}
-              key="description-textarea" // Force re-render when needed
+              maxLength={DESCRIPTION_MAX_LENGTH}
             />
           </div>
 
