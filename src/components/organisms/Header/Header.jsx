@@ -7,8 +7,10 @@ import NotebookForm from '../NoteBookForm/NoteBookForm'
 
 const Header = () => {
   const [showForm, setShowForm] = useState(false);
+  const [formKey, setFormKey] = useState(0); // Key to force form re-render
 
   const handleCreateNotebook = () => {
+    setFormKey(prev => prev + 1); // Increment key to force fresh form
     setShowForm(true);
   };
 
@@ -46,9 +48,9 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Conditionally render the form */}
+      {/* Conditionally render the form with a key to force fresh state */}
       {showForm && (
-        <NotebookForm onClose={handleCloseForm} />
+        <NotebookForm key={formKey} onClose={handleCloseForm} />
       )}
     </>
   )

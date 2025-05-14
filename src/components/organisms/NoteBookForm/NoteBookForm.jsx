@@ -2,14 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import styles from './NoteBookForm.module.scss';
 import { X } from 'lucide-react';
 import { useNotebooks } from '../../../context/NotebookContext';
+
 const NotebookForm = ({ onClose }) => {
   const { addNotebook } = useNotebooks();
-  const [formData, setFormData] = useState({
+  
+  // Initialize form data with a function to ensure fresh state each time
+  const getInitialFormData = () => ({
     title: '',
     description: '',
     color: '#8b5cf6',
     pages: 100
   });
+
+  const [formData, setFormData] = useState(getInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formRef = useRef(null);
@@ -24,6 +29,12 @@ const NotebookForm = ({ onClose }) => {
     { color: '#14b8a6', gradient: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)' },
     { color: '#f97316', gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)' }
   ];
+
+  // Reset form when component mounts (when modal opens)
+  useEffect(() => {
+    setFormData(getInitialFormData());
+    setIsSubmitting(false);
+  }, []); // Empty dependency array means this runs only on mount
 
   // Close modal on Escape key
   useEffect(() => {
@@ -96,6 +107,9 @@ const NotebookForm = ({ onClose }) => {
       // You can replace alert with a toast notification if you want
       alert('Notebook created successfully!');
       
+      // Reset form data before closing
+      setFormData(getInitialFormData());
+      
       // Close the form
       onClose();
     } catch (error) {
@@ -147,6 +161,7 @@ const NotebookForm = ({ onClose }) => {
                 placeholder="e.g., Data Structures & Algorithms"
                 required
                 disabled={isSubmitting}
+                key="title-input" // Force re-render when needed
               />
             </div>
             
@@ -185,6 +200,7 @@ const NotebookForm = ({ onClose }) => {
               placeholder="Describe what this notebook is about..."
               required
               disabled={isSubmitting}
+              key="description-textarea" // Force re-render when needed
             />
           </div>
 

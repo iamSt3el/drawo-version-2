@@ -1,15 +1,8 @@
 .notebook_manager {
-  padding: 20px;
-  padding-top: 100px; /* Space for fixed header */
-  
-  h1 {
-    text-align: center;
-    margin-bottom: 30px;
-  }
+  min-height: 100vh;
+  background-color: #f8fafc;
   
   .notebook_manager_header {
-    justify-content: center;
-    align-items: center;
     position: fixed;
     top: 0;
     left: 0;
@@ -19,25 +12,66 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
   
+  .notebook_content {
+    padding: 100px 20px 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .search_results {
+    margin-bottom: 20px;
+    text-align: center;
+    
+    p {
+      color: #6b7280;
+      font-style: italic;
+      background-color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      display: inline-block;
+    }
+  }
+  
+  .empty_state {
+    text-align: center;
+    margin-top: 80px;
+    
+    h2 {
+      color: #374151;
+      font-size: 1.875rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    p {
+      color: #6b7280;
+      font-size: 1.125rem;
+    }
+  }
+  
   .notebook_grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
     gap: 40px;
     margin-bottom: 30px;
   }
-  
-  button {
+
+  // Simple test button
+  .test_button {
     display: block;
-    margin: 0 auto;
+    margin: 20px auto;
     padding: 10px 20px;
-    background-color: #7F55B1;
+    background-color: #667eea;
     color: white;
     border: none;
-    border-radius: 5px;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
     
     &:hover {
-      background-color: #6A3D9A;
+      background-color: #5a67d8;
     }
   }
 }
