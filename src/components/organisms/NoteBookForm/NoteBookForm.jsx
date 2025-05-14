@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import './NoteBookForm.scss';
+import styles from './NoteBookForm.module.scss';
+import { X } from 'lucide-react';
 
-const NotebookForm = () => {
+const NotebookForm = ({ onClose }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -11,16 +12,14 @@ const NotebookForm = () => {
   });
 
   const presetColors = [
-    { color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6, #7c3aed)' },
-    { color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444, #dc2626)' },
-    { color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b, #d97706)' },
-    { color: '#10b981', gradient: 'linear-gradient(135deg, #10b981, #059669)' },
-    { color: '#3b82f6', gradient: 'linear-gradient(135deg, #3b82f6, #2563eb)' },
-    { color: '#ec4899', gradient: 'linear-gradient(135deg, #ec4899, #db2777)' },
-    { color: '#14b8a6', gradient: 'linear-gradient(135deg, #14b8a6, #0d9488)' },
-    { color: '#f97316', gradient: 'linear-gradient(135deg, #f97316, #ea580c)' },
-    { color: '#6366f1', gradient: 'linear-gradient(135deg, #6366f1, #4f46e5)' },
-    { color: '#84cc16', gradient: 'linear-gradient(135deg, #84cc16, #65a30d)' }
+    { color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)' },
+    { color: '#ef4444', gradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)' },
+    { color: '#f59e0b', gradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)' },
+    { color: '#10b981', gradient: 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)' },
+    { color: '#3b82f6', gradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)' },
+    { color: '#ec4899', gradient: 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)' },
+    { color: '#14b8a6', gradient: 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)' },
+    { color: '#f97316', gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)' }
   ];
 
   const handleInputChange = (e) => {
@@ -56,18 +55,26 @@ const NotebookForm = () => {
     };
 
     console.log('Notebook created:', notebookData);
-    // Here you would typically send the data to your backend
     alert('Notebook created successfully!');
+    
+    if (onClose) {
+      onClose();
+    }
   };
 
   return (
-    <div className="notebook-form-container">
-      <div className="form-wrapper">
-        <h2 className="form-title">Create New Notebook</h2>
-        
-        <form onSubmit={handleSubmit} className="notebook-form">
-          <div className="form-group">
-            <label className="form-label" htmlFor="title">
+    <div className={styles.notebookFormContainer}>
+      <div className={styles.formHeader}>
+        <h2 className={styles.formTitle}>Create New Notebook</h2>
+        <button className={styles.closeButton} onClick={onClose} aria-label="Close">
+          <X size={20} />
+        </button>
+      </div>
+      
+      <form onSubmit={handleSubmit} className={styles.notebookForm}>
+        <div className={styles.formRow}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel} htmlFor="title">
               Notebook Title
             </label>
             <input
@@ -76,83 +83,86 @@ const NotebookForm = () => {
               name="title"
               value={formData.title}
               onChange={handleInputChange}
-              className="form-input"
-              placeholder="What is DSA"
+              className={styles.formInput}
+              placeholder="e.g., Data Structures & Algorithms"
               required
             />
           </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="description">
-              Description
+          
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel} htmlFor="pages">
+              Pages: <span className={styles.pagesValue}>{formData.pages}</span>
             </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
+            <input
+              type="range"
+              id="pages"
+              name="pages"
+              value={formData.pages}
               onChange={handleInputChange}
-              className="form-textarea"
-              placeholder="This notebook contains notes about DSA. Like Array, linked list and trees."
-              required
+              className={styles.rangeInput}
+              min="50"
+              max="500"
+              step="10"
             />
           </div>
+        </div>
 
-          <div className="form-group">
-            <label className="form-label">Choose Color</label>
-            <div className="color-selection">
-              <div className="color-grid">
-                {presetColors.map((colorItem, index) => (
-                  <div
-                    key={index}
-                    className={`color-option ${
-                      formData.color === colorItem.color && !formData.isCustomColor 
-                        ? 'selected' 
-                        : ''
-                    }`}
-                    style={{ background: colorItem.gradient }}
-                    onClick={() => handleColorSelect(colorItem.color)}
-                  />
-                ))}
-              </div>
-              <div className="custom-color-section">
-                <div className="color-picker-wrapper">
-                  <input
-                    type="color"
-                    id="customColor"
-                    value={formData.color}
-                    onChange={handleCustomColor}
-                    className="color-picker"
-                  />
-                </div>
-                <span className="custom-color-label">Custom</span>
-              </div>
-            </div>
-          </div>
+        <div className={styles.formGroup}>
+          <label className={styles.formLabel} htmlFor="description">
+            Description
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleInputChange}
+            className={styles.formTextarea}
+            placeholder="Describe what this notebook is about..."
+            required
+          />
+        </div>
 
-          <div className="form-group">
-            <label className="form-label" htmlFor="pages">
-              Number of Pages
-            </label>
-            <div className="range-container">
-              <input
-                type="range"
-                id="pages"
-                name="pages"
-                value={formData.pages}
-                onChange={handleInputChange}
-                className="range-input"
-                min="50"
-                max="500"
+        <div className={styles.colorSection}>
+          <div className={styles.colorSectionTitle}>Choose Color Theme</div>
+          
+          <div className={styles.colorGrid}>
+            {presetColors.map((colorItem, index) => (
+              <div
+                key={index}
+                className={`${styles.colorOption} ${
+                  formData.color === colorItem.color && !formData.isCustomColor 
+                    ? styles.selected 
+                    : ''
+                }`}
+                style={{ background: colorItem.gradient }}
+                onClick={() => handleColorSelect(colorItem.color)}
               />
-              <span className="range-value">{formData.pages}</span>
-            </div>
+            ))}
           </div>
+          
+          <div className={styles.customColorRow}>
+            <div className={styles.customColorPicker}>
+              <input
+                type="color"
+                value={formData.color}
+                onChange={handleCustomColor}
+              />
+            </div>
+            <span className={styles.customColorLabel}>
+              Or choose a custom color
+            </span>
+          </div>
+        </div>
 
-          <button type="submit" className="submit-btn">
+        <div className={styles.formActions}>
+          <button type="button" onClick={onClose} className={styles.cancelBtn}>
+            Cancel
+          </button>
+          <button type="submit" className={styles.submitBtn}>
             Create Notebook
           </button>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 };

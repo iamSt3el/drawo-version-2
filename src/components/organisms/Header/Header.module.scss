@@ -29,5 +29,27 @@
         flex-shrink: 0;
         padding-right: 20px;
     }
+}
 
+// Form overlay styles
+.formOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    overflow: hidden; // Prevent scrolling on the overlay
+}
+
+.formContainer {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
 }
