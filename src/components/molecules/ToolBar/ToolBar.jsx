@@ -9,8 +9,6 @@ const ToolBar = ({ onToolChange, onClearCanvas, onUndo, setIsPen }) => {
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState('pen');
 
-
-
   const handleBackButtonClick = () => {
     navigate('/');
   };
@@ -26,8 +24,6 @@ const ToolBar = ({ onToolChange, onClearCanvas, onUndo, setIsPen }) => {
       onToolChange(tool);
     }
   };
-
-
 
   const handleClearCanvas = () => {
     if (onClearCanvas) {

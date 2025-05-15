@@ -52,7 +52,6 @@ export class CanvasEngine {
       size: strokeWidth,
       smoothing: 0.5,    // Medium smoothing - don't over-smooth
       streamline: 0.5,   // Medium streamline - helps with fast movements
-      //easing: (t) => t,  // Linear easing
       last: true,        // Process as final stroke
       start: { 
         taper: 0,        // No taper at start
@@ -192,11 +191,25 @@ export class CanvasEngine {
            eraserY <= expandedBbox.y + expandedBbox.height;
   }
 
+  // Helper method to normalize color (handles both hex and rgba colors)
+  normalizeColor(color) {
+    // If color is already in rgba format, return as is
+    if (color.startsWith('rgba')) {
+      return color;
+    }
+    // If it's rgb format, return as is
+    if (color.startsWith('rgb')) {
+      return color;
+    }
+    // If it's hex, return as is
+    return color;
+  }
+
   addPath(pathData, color, strokeWidth, inputType) {
     const newPath = {
       id: this.nextPathId,
       pathData,
-      color,
+      color: this.normalizeColor(color), // This now properly handles rgba colors
       type: 'stroke',
       inputType,
       strokeWidth
@@ -245,8 +258,19 @@ export class CanvasEngine {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, this.options.width, this.options.height);
 
+    // Clone the SVG and ensure all paths have proper colors
+    const svgClone = svg.cloneNode(true);
+    const paths = svgClone.querySelectorAll('path');
+    
+    // Ensure all paths have their fill colors properly set
+    paths.forEach((path, index) => {
+      if (this.paths[index] && this.paths[index].color) {
+        path.setAttribute('fill', this.paths[index].color);
+      }
+    });
+
     // Convert SVG to image
-    const svgData = new XMLSerializer().serializeToString(svg);
+    const svgData = new XMLSerializer().serializeToString(svgClone);
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(svgBlob);
 

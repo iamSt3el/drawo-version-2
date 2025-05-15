@@ -185,7 +185,7 @@ const SmoothCanvas = forwardRef(({
       {/* Background layers */}
       {backgroundImageUrl && rendererRef.current?.renderBackgroundImage(backgroundImageUrl, width, height)}
       
-      {/* Canvas for potential raster operations */}
+      {/* Canvas for potential raster operations - ensure background is transparent */}
       <canvas
         ref={canvasRef}
         width={width * dpr}
@@ -194,7 +194,8 @@ const SmoothCanvas = forwardRef(({
         style={{
           touchAction: 'none',
           width: `${width}px`,
-          height: `${height}px`
+          height: `${height}px`,
+          background: 'transparent' // Ensure canvas background is transparent
         }}
       />
 

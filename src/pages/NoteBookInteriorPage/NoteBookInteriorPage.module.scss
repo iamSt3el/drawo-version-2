@@ -1,4 +1,5 @@
-.notebook_interior{
+// src/pages/NoteBookInteriorPage/NoteBookInteriorPage.module.scss
+.notebook_interior {
     background-color: #F1F5F9;
     width: 100%;
     height: 100vh;
@@ -6,29 +7,314 @@
     flex-direction: column;
     justify-content: space-between;
 
-    .notebook_interior_canvas{
-        padding-left: 260px;
-        flex: 1;
+    .notebook_interior_toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
         background-color: #F1F5F9;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        padding: 8px 0;
     }
 
-    .notebook_interior_ui{
+    .notebook_interior_ui {
         display: flex;
+        flex: 1;
+        position: relative;
+        overflow: hidden;
 
-        .notebook_interior_pen_setting_panel{
-            padding-right: 10px;
-            width: 200px; /* Fixed width for the panel */
-            min-width: 200px; /* Ensure it doesn't shrink */
-            opacity: 1;
-            transition: opacity 0.3s ease;
-            
-            /* When empty (no children), preserve space but make invisible */
-            &:empty {
+        .notebook_interior_canvas {
+            flex: 1;
+            background-color: #F1F5F9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            // Remove transition and margin changes to prevent layout shifts
+        }
+
+        .notebook_interior_pen_setting_panel {
+            position: fixed;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 260px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+
+            &.visible {
+                transform: translateY(-50%) translateX(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            &.hidden {
+                transform: translateY(-50%) translateX(100%);
                 opacity: 0;
                 pointer-events: none;
+            }
+
+            // Panel toggle button
+            .panel_toggle {
+                position: absolute;
+                left: -40px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 32px;
+                height: 60px;
+                background-color: white;
+                border: 1px solid #e5e7eb;
+                border-right: none;
+                border-radius: 8px 0 0 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.2s ease;
+                color: #6b7280;
+
+                &:hover {
+                    background-color: #f8fafc;
+                    color: #374151;
+                    transform: translateY(-50%) translateX(-2px);
+                }
+
+                svg {
+                    transition: transform 0.3s ease;
+                    
+                    &.rotate {
+                        transform: rotate(180deg);
+                    }
+                }
+            }
+        }
+
+        .notebook_interior_page_setting_panel {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 260px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+
+            &.visible {
+                transform: translateY(-50%) translateX(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            &.hidden {
+                transform: translateY(-50%) translateX(-100%);
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            // Panel toggle button for left panel
+            .panel_toggle {
+                position: absolute;
+                right: -40px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 32px;
+                height: 60px;
+                background-color: white;
+                border: 1px solid #e5e7eb;
+                border-left: none;
+                border-radius: 0 8px 8px 0;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+                transition: all 0.2s ease;
+                color: #6b7280;
+
+                &:hover {
+                    background-color: #f8fafc;
+                    color: #374151;
+                    transform: translateY(-50%) translateX(2px);
+                }
+
+                svg {
+                    transition: transform 0.3s ease;
+                    
+                    &.rotate {
+                        transform: rotate(180deg);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Enhanced responsive design
+@media screen and (max-width: 1200px) {
+    .notebook_interior {
+        .notebook_interior_pen_setting_panel {
+            width: 240px;
+        }
+
+        .notebook_interior_page_setting_panel {
+            width: 240px;
+        }
+    }
+}
+
+@media screen and (max-width: 1024px) {
+    .notebook_interior {
+        .notebook_interior_pen_setting_panel {
+            position: fixed;
+            bottom: 0;
+            right: 20px;
+            left: auto;
+            top: auto;
+            width: auto;
+            max-width: 300px;
+            transform: none;
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+            background-color: #F1F5F9;
+            border-top: 1px solid #e5e7eb;
+            border-radius: 12px 12px 0 0;
+
+            &.visible {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            &.hidden {
+                transform: translateY(100%);
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .panel_toggle {
+                left: 50%;
+                top: -32px;
+                transform: translateX(-50%);
+                width: 60px;
+                height: 32px;
+                border-radius: 8px 8px 0 0;
+                border-bottom: none;
+                border-left: 1px solid #e5e7eb;
+                box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+
+                &:hover {
+                    transform: translateX(-50%) translateY(-2px);
+                }
+
+                svg {
+                    &.rotate {
+                        transform: rotate(90deg);
+                    }
+                }
+            }
+        }
+
+        .notebook_interior_page_setting_panel {
+            position: fixed;
+            bottom: 0;
+            left: 20px;
+            right: auto;
+            top: auto;
+            width: auto;
+            max-width: 300px;
+            transform: none;
+            display: flex;
+            justify-content: center;
+            padding: 16px;
+            background-color: #F1F5F9;
+            border-top: 1px solid #e5e7eb;
+            border-radius: 12px 12px 0 0;
+
+            &.visible {
+                transform: translateY(0);
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            &.hidden {
+                transform: translateY(100%);
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            .panel_toggle {
+                right: 50%;
+                top: -32px;
+                transform: translateX(50%);
+                width: 60px;
+                height: 32px;
+                border-radius: 8px 8px 0 0;
+                border-bottom: none;
+                border-right: 1px solid #e5e7eb;
+                box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+
+                &:hover {
+                    transform: translateX(50%) translateY(-2px);
+                }
+
+                svg {
+                    &.rotate {
+                        transform: rotate(-90deg);
+                    }
+                }
+            }
+        }
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .notebook_interior {
+        .notebook_interior_canvas {
+            padding: 10px;
+        }
+
+        .notebook_interior_pen_setting_panel,
+        .notebook_interior_page_setting_panel {
+            padding: 12px;
+            left: 10px;
+            right: 10px;
+            max-width: none;
+        }
+    }
+}
+
+// Touch device optimizations
+@media (pointer: coarse) {
+    .notebook_interior {
+        .notebook_interior_pen_setting_panel,
+        .notebook_interior_page_setting_panel {
+            .panel_toggle {
+                width: 40px;
+                height: 40px;
+                
+                @media screen and (max-width: 1024px) {
+                    width: 60px;
+                    height: 36px;
+                }
+            }
+        }
+    }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+    .notebook_interior {
+        .notebook_interior_pen_setting_panel,
+        .notebook_interior_page_setting_panel {
+            .panel_toggle {
+                border-width: 2px;
+                
+                &:hover {
+                    border-color: #000;
+                }
             }
         }
     }
