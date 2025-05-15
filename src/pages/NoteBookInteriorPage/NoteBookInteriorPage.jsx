@@ -1,17 +1,32 @@
-// src/pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - COMPLETE DEBUG VERSION
+// pages/NoteBookInteriorPage/NoteBookInteriorPageWithFS.jsx - Updated with filesystem integration
 import React, { useState, useRef, useEffect } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useNotebooks } from '../../context/NotebookContext'
+import { useParams } from 'react-router-dom'
 import { NoteBookUi, ToolBar } from '../../components/molecules'
 import PenSettingPanel from '../../components/molecules/PenSettingPanel/PenSettingPanel'
 import PageSettingPanel from '../../components/molecules/PageSettingPanel/PageSettingPanel'
+import { useNotebookData } from '../../hooks/useNotebookData'
+import { useCanvasAutoSave } from '../../hooks/useCanvasAutoSave'
+import { useNotebooks } from '../../context/NotebookContext'
 
 const NoteBookInteriorPage = () => {
-    const navigate = useNavigate();
     const { id } = useParams();
-    const { getNotebook } = useNotebooks();
+    const { pageSettings, updatePageSettings } = useNotebooks();
     const notebookUiRef = useRef(null);
+
+    // Use custom hook for notebook data management
+    const {
+        notebook,
+        currentPageNumber,
+        currentPageData,
+        loading,
+        error,
+        saveCurrentPage,
+        navigateToPage,
+        nextPage,
+        previousPage,
+        addNewPage
+    } = useNotebookData(id);
 
     // Canvas state
     const [currentTool, setCurrentTool] = useState('pen');
@@ -20,133 +35,186 @@ const NoteBookInteriorPage = () => {
     const [opacity, setOpacity] = useState(100);
     const [eraserWidth] = useState(10);
     const [isPen, setIsPen] = useState(true);
-    const [color, setColor] = useState('#000000');
-    const [size, setSize] = useState(5);
-
-    // Final stroke color that combines color and opacity
-    const [finalStrokeColor, setFinalStrokeColor] = useState('#000000');
 
     // Panel visibility state
-    const [isPanelVisible, setIsPanelVisible] = useState(true);
-    
-    // Page settings state
-    const [pattern, setPattern] = useState('grid');
-    const [patternSize, setPatternSize] = useState(20);
-    const [patternColor, setPatternColor] = useState('#e5e7eb');
-    const [patternOpacity, setPatternOpacity] = useState(50);
+    const [isPenPanelVisible, setIsPenPanelVisible] = useState(true);
+    const [isPagePanelVisible, setIsPagePanelVisible] = useState(true);
 
-    const notebook = getNotebook(id);
+    // Auto-save hook for canvas changes
+    const { debouncedSave, saveNow } = useCanvasAutoSave(saveCurrentPage, 3000);
 
-    // Convert hex color to rgba with opacity
-    const getColorWithOpacity = (hexColor, opacity) => {
-        // Remove # if present
-        const hex = hexColor.replace('#', '');
-        
-        // Handle 3-digit hex colors
-        let r, g, b;
-        if (hex.length === 3) {
-            r = parseInt(hex[0] + hex[0], 16);
-            g = parseInt(hex[1] + hex[1], 16);
-            b = parseInt(hex[2] + hex[2], 16);
-        } else {
-            r = parseInt(hex.substring(0, 2), 16);
-            g = parseInt(hex.substring(2, 4), 16);
-            b = parseInt(hex.substring(4, 6), 16);
+    // Final stroke color that combines color and opacity
+    const finalStrokeColor = opacity < 100 
+        ? `rgba(${parseInt(strokeColor.slice(1, 3), 16)}, ${parseInt(strokeColor.slice(3, 5), 16)}, ${parseInt(strokeColor.slice(5, 7), 16)}, ${opacity / 100})`
+        : strokeColor;
+
+    // Load canvas data when current page changes
+    useEffect(() => {
+        if (currentPageData && currentPageData.canvasData && notebookUiRef.current) {
+            // You might need to implement a method to load canvas data
+            // This depends on how your SmoothCanvas component handles loading data
+            console.log('Loading canvas data for page:', currentPageNumber);
         }
-        
-        return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
-    };
+    }, [currentPageData, currentPageNumber]);
 
-    // Update final stroke color when color or opacity changes
+    // Update page settings when they change
     useEffect(() => {
-        if (opacity < 100) {
-            const newColor = getColorWithOpacity(strokeColor, opacity);
-            console.log('Updating finalStrokeColor:', newColor); // Debug log
-            setFinalStrokeColor(newColor);
-        } else {
-            console.log('Using full opacity color:', strokeColor); // Debug log
-            setFinalStrokeColor(strokeColor);
+        if (currentPageData && currentPageData.settings) {
+            updatePageSettings(currentPageData.settings);
         }
-    }, [strokeColor, opacity]);
-
-    // Update color and size states when strokeColor or strokeWidth change
-    useEffect(() => {
-        setColor(strokeColor);
-    }, [strokeColor]);
-
-    useEffect(() => {
-        setSize(strokeWidth);
-    }, [strokeWidth]);
+    }, [currentPageData, updatePageSettings]);
 
     const handleToolChange = (tool) => {
         setCurrentTool(tool);
-        // Show pen panel only when pen is selected
-        setIsPanelVisible(tool === 'pen');
+        setIsPenPanelVisible(tool === 'pen');
     };
 
     const handleColorChange = (newColor) => {
-        console.log('Color changed to:', newColor); // Debug log
         setStrokeColor(newColor);
-        setColor(newColor); // Update the local color state as well
     };
 
     const handleStrokeWidthChange = (width) => {
-        console.log('Stroke width changed to:', width); // Debug log
         setStrokeWidth(width);
-        setSize(width); // Update the local size state as well
     };
 
     const handleOpacityChange = (newOpacity) => {
-        console.log('Opacity changed to:', newOpacity); // Debug log
         setOpacity(newOpacity);
     };
 
-    const handlePatternChange = (newPattern) => {
-        setPattern(newPattern);
-    };
-
-    const handlePatternSizeChange = (newSize) => {
-        setPatternSize(newSize);
-    };
-
-    const handlePatternColorChange = (newColor) => {
-        setPatternColor(newColor);
-    };
-
-    const handlePatternOpacityChange = (newOpacity) => {
-        setPatternOpacity(newOpacity);
+    const handleCanvasChange = async (dataUrl) => {
+        // Auto-save canvas changes
+        debouncedSave(dataUrl);
     };
 
     const handleClearCanvas = () => {
         if (notebookUiRef.current) {
             notebookUiRef.current.clearCanvas();
+            // Save immediately after clearing
+            setTimeout(() => {
+                notebookUiRef.current.exportImage().then(dataUrl => {
+                    saveNow(dataUrl);
+                });
+            }, 100);
         }
     };
 
     const handleUndo = () => {
         if (notebookUiRef.current) {
             notebookUiRef.current.undo();
+            // Save after undo
+            setTimeout(() => {
+                notebookUiRef.current.exportImage().then(dataUrl => {
+                    debouncedSave(dataUrl);
+                });
+            }, 100);
         }
     };
 
-    const handleCanvasChange = (dataUrl) => {
-        // You can save the canvas data here if needed
-        console.log('Canvas changed:', dataUrl);
+    const handlePageSettingChange = (settingName, value) => {
+        const newSettings = { ...pageSettings, [settingName]: value };
+        updatePageSettings(newSettings);
     };
 
-    console.log('Rendering with finalStrokeColor:', finalStrokeColor); // Debug log
+    // Keyboard shortcuts for page navigation
+    useEffect(() => {
+        const handleKeyPress = (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'ArrowLeft':
+                        e.preventDefault();
+                        previousPage();
+                        break;
+                    case 'ArrowRight':
+                        e.preventDefault();
+                        nextPage();
+                        break;
+                    case 's':
+                        e.preventDefault();
+                        // Manual save
+                        if (notebookUiRef.current) {
+                            notebookUiRef.current.exportImage().then(dataUrl => {
+                                saveNow(dataUrl);
+                            });
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [previousPage, nextPage, saveNow]);
+
+    if (loading) {
+        return (
+            <div className={styles.loading_container}>
+                <div className={styles.loading_spinner}>Loading notebook...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className={styles.error_container}>
+                <div className={styles.error_message}>Error: {error}</div>
+            </div>
+        );
+    }
+
+    if (!notebook) {
+        return (
+            <div className={styles.error_container}>
+                <div className={styles.error_message}>Notebook not found</div>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.notebook_interior}>
             <div className={styles.notebook_interior_toolbar}>
                 <ToolBar
                     onToolChange={handleToolChange}
-                    onColorChange={handleColorChange}
-                    onStrokeWidthChange={handleStrokeWidthChange}
                     onClearCanvas={handleClearCanvas}
                     onUndo={handleUndo}
                     setIsPen={setIsPen}
                 />
+                
+                {/* Page Navigation */}
+                <div className={styles.page_navigation}>
+                    <button 
+                        onClick={previousPage} 
+                        disabled={currentPageNumber <= 1}
+                        className={styles.nav_button}
+                    >
+                        ← Previous
+                    </button>
+                    
+                    <span className={styles.page_info}>
+                        Page {currentPageNumber} of {notebook.pages}
+                    </span>
+                    
+                    <button 
+                        onClick={nextPage} 
+                        disabled={currentPageNumber >= notebook.pages}
+                        className={styles.nav_button}
+                    >
+                        Next →
+                    </button>
+                    
+                    <button 
+                        onClick={addNewPage} 
+                        className={styles.add_page_button}
+                    >
+                        + Add Page
+                    </button>
+                </div>
+
+                {/* Save Status */}
+                <div className={styles.save_status}>
+                    Auto-save enabled
+                </div>
             </div>
             
             <div className={styles.notebook_interior_ui}>
@@ -157,35 +225,34 @@ const NoteBookInteriorPage = () => {
                         strokeColor={finalStrokeColor}
                         strokeWidth={strokeWidth}
                         eraserWidth={eraserWidth}
-                        pattern={pattern}
-                        patternSize={patternSize}
-                        patternColor={patternColor}
-                        patternOpacity={patternOpacity}
+                        pattern={pageSettings.pattern}
+                        patternSize={pageSettings.patternSize}
+                        patternColor={pageSettings.patternColor}
+                        patternOpacity={pageSettings.patternOpacity}
                         onCanvasChange={handleCanvasChange}
                     />
                 </div>
                 
-                {/* Enhanced panel with smooth transitions */}
+                {/* Pen Settings Panel */}
                 <div className={`${styles.notebook_interior_pen_setting_panel} ${
-                    isPanelVisible && isPen ? styles.visible : styles.hidden
+                    isPenPanelVisible && isPen ? styles.visible : styles.hidden
                 }`}>
                     <PenSettingPanel
                         onColorChange={handleColorChange}
                         onStrokeWidthChange={handleStrokeWidthChange}
                         onOpacityChange={handleOpacityChange}
-                        size={size}
-                        color={color}
+                        size={strokeWidth}
+                        color={strokeColor}
                         opacity={opacity}
-                        setSize={setSize}
-                        setColor={setColor}
+                        setSize={setStrokeWidth}
+                        setColor={setStrokeColor}
                         setOpacity={setOpacity}
                     />
                     
-                    {/* Panel toggle button */}
                     <button
                         className={styles.panel_toggle}
-                        onClick={() => setIsPanelVisible(!isPanelVisible)}
-                        title={isPanelVisible ? "Hide pen settings" : "Show pen settings"}
+                        onClick={() => setIsPenPanelVisible(!isPenPanelVisible)}
+                        title={isPenPanelVisible ? "Hide pen settings" : "Show pen settings"}
                     >
                         <svg
                             width="16"
@@ -196,31 +263,51 @@ const NoteBookInteriorPage = () => {
                             strokeWidth="2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
-                            className={isPanelVisible ? styles.rotate : ''}
+                            className={isPenPanelVisible ? styles.rotate : ''}
                         >
                             <path d="m9 18 6-6-6-6"/>
                         </svg>
                     </button>
                 </div>
 
-                {/* Page Settings Panel - Always available on the left */}
+                {/* Page Settings Panel */}
                 <div className={`${styles.notebook_interior_page_setting_panel} ${
-                    styles.visible
+                    isPagePanelVisible ? styles.visible : styles.hidden
                 }`}>
                     <PageSettingPanel
-                        onPatternChange={handlePatternChange}
-                        onPatternSizeChange={handlePatternSizeChange}
-                        onPatternColorChange={handlePatternColorChange}
-                        onPatternOpacityChange={handlePatternOpacityChange}
-                        pattern={pattern}
-                        patternSize={patternSize}
-                        patternColor={patternColor}
-                        patternOpacity={patternOpacity}
-                        setPattern={setPattern}
-                        setPatternSize={setPatternSize}
-                        setPatternColor={setPatternColor}
-                        setPatternOpacity={setPatternOpacity}
+                        onPatternChange={(pattern) => handlePageSettingChange('pattern', pattern)}
+                        onPatternSizeChange={(size) => handlePageSettingChange('patternSize', size)}
+                        onPatternColorChange={(color) => handlePageSettingChange('patternColor', color)}
+                        onPatternOpacityChange={(opacity) => handlePageSettingChange('patternOpacity', opacity)}
+                        pattern={pageSettings.pattern}
+                        patternSize={pageSettings.patternSize}
+                        patternColor={pageSettings.patternColor}
+                        patternOpacity={pageSettings.patternOpacity}
+                        setPattern={(pattern) => handlePageSettingChange('pattern', pattern)}
+                        setPatternSize={(size) => handlePageSettingChange('patternSize', size)}
+                        setPatternColor={(color) => handlePageSettingChange('patternColor', color)}
+                        setPatternOpacity={(opacity) => handlePageSettingChange('patternOpacity', opacity)}
                     />
+                    
+                    <button
+                        className={styles.panel_toggle}
+                        onClick={() => setIsPagePanelVisible(!isPagePanelVisible)}
+                        title={isPagePanelVisible ? "Hide page settings" : "Show page settings"}
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={isPagePanelVisible ? '' : styles.rotate}
+                        >
+                            <path d="m15 18-6-6 6-6"/>
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
