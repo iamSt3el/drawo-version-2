@@ -14,9 +14,7 @@ const SmoothCanvas = forwardRef(({
   eraserWidth = 10,
   onCanvasChange,
   backgroundImageUrl = null,
-  showGrid = false,
-  gridSize = 20,
-  gridColor = '#e5e7eb'
+
 }, ref) => {
   const canvasRef = useRef(null);
   const svgRef = useRef(null);
@@ -79,17 +77,8 @@ const SmoothCanvas = forwardRef(({
       }
     });
 
-    // Attach event listeners with passive options for better performance
-    const element = canvasRef.current;
-    element.style.touchAction = 'none';
-    element.style.msTouchAction = 'none';
-    
-    // Add specific optimizations for writing
-    element.style.webkitUserSelect = 'none';
-    element.style.userSelect = 'none';
-    element.style.webkitTouchCallout = 'none';
-    
-    eventHandler.attachListeners(element);
+    // Attach event listeners
+    eventHandler.attachListeners(canvasRef.current);
 
     engineRef.current = engine;
     eventHandlerRef.current = eventHandler;
@@ -103,7 +92,7 @@ const SmoothCanvas = forwardRef(({
         engineRef.current.destroy();
       }
     };
-  }, []); // Empty dependency array for initialization only
+  }, []);
 
   // Update options when props change
   useEffect(() => {
@@ -195,9 +184,8 @@ const SmoothCanvas = forwardRef(({
     >
       {/* Background layers */}
       {backgroundImageUrl && rendererRef.current?.renderBackgroundImage(backgroundImageUrl, width, height)}
-      {showGrid && rendererRef.current?.renderGrid(width, height, gridSize, gridColor)}
       
-      {/* Canvas for optimal touch/pen input */}
+      {/* Canvas for potential raster operations */}
       <canvas
         ref={canvasRef}
         width={width * dpr}
@@ -205,16 +193,12 @@ const SmoothCanvas = forwardRef(({
         className={styles.canvas}
         style={{
           touchAction: 'none',
-          msTouchAction: 'none',
           width: `${width}px`,
-          height: `${height}px`,
-          // Ensure pixel-perfect rendering
-          imageRendering: 'pixelated',
-          imageRendering: '-webkit-optimize-contrast'
+          height: `${height}px`
         }}
       />
 
-      {/* SVG for vector drawing with optimized settings */}
+      {/* SVG for vector drawing */}
       <svg
         ref={svgRef}
         width={width}
@@ -223,43 +207,16 @@ const SmoothCanvas = forwardRef(({
         className={styles.svg}
         style={{
           pointerEvents: 'none',
-          shapeRendering: 'geometricPrecision',
-          // Optimize for crisp strokes
-          textRendering: 'geometricPrecision',
-          colorRendering: 'optimizeQuality'
+          shapeRendering: 'geometricPrecision'
         }}
       >
-        {/* Render paths with enhanced settings */}
-        {rendererRef.current && paths.map((pathObj) => (
-          <path
-            key={pathObj.id}
-            d={pathObj.pathData}
-            fill={pathObj.color}
-            stroke="none"
-            fillRule="nonzero"
-            style={{
-              opacity: pathsToErase.has(pathObj.id) ? 0.3 : 1,
-              transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-              // Optimize path rendering
-              vectorEffect: 'non-scaling-stroke',
-              shapeRendering: pathObj.isSinglePoint ? 'auto' : 'geometricPrecision'
-            }}
-          />
-        ))}
+        {/* Render paths */}
+        {rendererRef.current?.renderPaths()}
       </svg>
 
-      {/* Enhanced eraser cursor */}
-      {currentTool === 'eraser' && showEraser && (
-        <div
-          className={styles.eraserCursor}
-          style={{
-            width: eraserWidth * 2,
-            height: eraserWidth * 2,
-            left: eraserPosition.x - eraserWidth,
-            top: eraserPosition.y - eraserWidth,
-          }}
-        />
-      )}
+      {/* Eraser cursor */}
+      {currentTool === 'eraser' && showEraser && 
+        rendererRef.current?.renderEraserCursor(showEraser, eraserPosition, eraserWidth)}
     </div>
   );
 });
