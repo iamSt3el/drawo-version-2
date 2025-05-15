@@ -123,8 +123,33 @@ const SmoothCanvas = forwardRef(({
     }
   }, [width, height, currentTool, strokeColor, strokeWidth, eraserWidth]);
 
+  const loadCanvasData = (dataUrl) => {
+    if (!dataUrl || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      // Clear canvas first
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Draw the loaded image
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    };
+    
+    img.onerror = (error) => {
+      console.error('Error loading canvas data:', error);
+    };
+    
+    img.src = dataUrl;
+  };
+
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
+
+    
+
     eraseMode: (mode) => {
       if (engineRef.current) {
         engineRef.current.isErasing = mode;
@@ -172,7 +197,8 @@ const SmoothCanvas = forwardRef(({
         return success;
       }
       return false;
-    }
+    },
+    loadCanvasData: loadCanvasData // Add this line
   }));
 
   const dpr = window.devicePixelRatio || 1;

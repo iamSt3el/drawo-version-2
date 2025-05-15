@@ -1,9 +1,9 @@
 // src/components/molecules/NoteBookUi/NoteBookUi.jsx
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import styles from './NoteBookUi.module.scss'
 import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
 
-const NoteBookUi = ({ 
+const NoteBookUi = forwardRef(({ 
   onCanvasChange,
   currentTool = 'pen',
   strokeColor = '#000000',
@@ -12,8 +12,9 @@ const NoteBookUi = ({
   pattern = 'grid',
   patternSize = 20,
   patternColor = '#e5e7eb',
-  patternOpacity = 50
-}) => {
+  patternOpacity = 50,
+  initialCanvasData = null
+}, ref) => {
   const canvasRef = useRef(null);
   const [numberOfHoles, setNumberOfHoles] = useState(25);
   const [canvasSize, setCanvasSize] = useState({ width: 870, height: 870 });
@@ -42,6 +43,13 @@ const NoteBookUi = ({
       window.removeEventListener('resize', updateSizeAndHoles);
     };
   }, []);
+
+  // Load initial canvas data when provided
+  useEffect(() => {
+    if (initialCanvasData && canvasRef.current) {
+      canvasRef.current.loadCanvasData(initialCanvasData);
+    }
+  }, [initialCanvasData]);
 
   // Generate background pattern styles
   const generateBackgroundPattern = () => {
@@ -107,24 +115,32 @@ const NoteBookUi = ({
 
   const backgroundStyle = generateBackgroundPattern();
 
-  const clearCanvas = () => {
-    if (canvasRef.current) {
-      canvasRef.current.clearCanvas();
-    }
-  };
-
-  const undo = () => {
-    if (canvasRef.current) {
-      canvasRef.current.undo();
-    }
-  };
-
-  const exportImage = async (format = 'png') => {
-    if (canvasRef.current) {
-      return await canvasRef.current.exportImage(format);
-    }
-    return '';
-  };
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    clearCanvas: () => {
+      if (canvasRef.current) {
+        canvasRef.current.clearCanvas();
+      }
+    },
+    undo: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.undo();
+      }
+      return false;
+    },
+    exportImage: async (format = 'png') => {
+      if (canvasRef.current) {
+        return await canvasRef.current.exportImage(format);
+      }
+      return '';
+    },
+    loadCanvasData: (dataUrl) => {
+      if (canvasRef.current) {
+        canvasRef.current.loadCanvasData(dataUrl);
+      }
+    },
+    canvasRef: canvasRef.current // Expose canvas ref for direct access
+  }));
 
   return (
     <div className={styles.notebookui_cover}>
@@ -144,22 +160,13 @@ const NoteBookUi = ({
           strokeWidth={strokeWidth}
           eraserWidth={eraserWidth}
           onCanvasChange={handleCanvasChange}
+          initialCanvasData={initialCanvasData}
         />
       </div>
     </div>
   );
-};
+});
 
-// Export additional methods for parent components to use
-export const useNoteBookUi = () => {
-  const ref = useRef(null);
-  
-  return {
-    ref,
-    clearCanvas: () => ref.current?.clearCanvas(),
-    undo: () => ref.current?.undo(),
-    exportImage: (format) => ref.current?.exportImage(format)
-  };
-};
+NoteBookUi.displayName = 'NoteBookUi';
 
 export default NoteBookUi;

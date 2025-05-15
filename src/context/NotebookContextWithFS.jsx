@@ -41,18 +41,36 @@ export const NotebookProvider = ({ children }) => {
     loadAppSettings();
   }, []);
 
-  // Filter notebooks based on search query
-  useEffect(() => {
+  
+// Filter notebooks based on search query
+useEffect(() => {
+  // Use a memoization approach to prevent unnecessary updates
+  const applyFilter = () => {
     if (!searchQuery.trim()) {
-      setFilteredNotebooks(notebooks);
+      // Only update if the arrays are actually different
+      if (filteredNotebooks.length !== notebooks.length) {
+        setFilteredNotebooks(notebooks);
+      }
     } else {
       const filtered = notebooks.filter(notebook =>
         notebook.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         notebook.description.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredNotebooks(filtered);
+      
+      // Only update state if the filtered results are different
+      const currentIds = new Set(filteredNotebooks.map(nb => nb.id));
+      const newIds = new Set(filtered.map(nb => nb.id));
+      
+      // Check if the sets are different
+      if (currentIds.size !== newIds.size || 
+          filtered.some(nb => !currentIds.has(nb.id))) {
+        setFilteredNotebooks(filtered);
+      }
     }
-  }, [notebooks, searchQuery]);
+  };
+  
+  applyFilter();
+}, [notebooks, searchQuery, filteredNotebooks]);
 
   // Load all notebooks from filesystem
   const loadNotebooks = async () => {
