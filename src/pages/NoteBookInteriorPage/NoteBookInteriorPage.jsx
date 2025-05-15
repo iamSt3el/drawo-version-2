@@ -7,7 +7,8 @@ import PenSettingPanel from '../../components/molecules/PenSettingPanel/PenSetti
 import PageSettingPanel from '../../components/molecules/PageSettingPanel/PageSettingPanel'
 import { useNotebookData } from '../../hooks/useNotebookData'
 import { useCanvasAutoSave } from '../../hooks/useCanvasAutoSave'
-import { useNotebooks } from '../../context/NotebookContextWithFS';
+import { useNotebooks } from '../../context/NotebookContextWithFS'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const NoteBookInteriorPage = () => {
     const { id } = useParams();
@@ -24,8 +25,7 @@ const NoteBookInteriorPage = () => {
         saveCurrentPage,
         navigateToPage,
         nextPage,
-        previousPage,
-        addNewPage
+        previousPage
     } = useNotebookData(id);
 
     // Canvas state
@@ -51,9 +51,20 @@ const NoteBookInteriorPage = () => {
     // Load canvas data when current page changes
     useEffect(() => {
         if (currentPageData && currentPageData.canvasData && notebookUiRef.current) {
-            // You might need to implement a method to load canvas data
-            // This depends on how your SmoothCanvas component handles loading data
-            console.log('Loading canvas data for page:', currentPageNumber);
+            // Load saved canvas data
+            const img = new Image();
+            img.onload = () => {
+                // Clear canvas first
+                notebookUiRef.current.clearCanvas();
+                // Then load the saved image
+                const canvas = notebookUiRef.current.canvasRef?.current;
+                if (canvas) {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                }
+            };
+            img.src = currentPageData.canvasData;
         }
     }, [currentPageData, currentPageNumber]);
 
@@ -82,18 +93,27 @@ const NoteBookInteriorPage = () => {
     };
 
     const handleCanvasChange = async (dataUrl) => {
-        // Auto-save canvas changes
+        // Auto-save canvas changes with the data URL
         debouncedSave(dataUrl);
     };
 
     const handleClearCanvas = () => {
         if (notebookUiRef.current) {
             notebookUiRef.current.clearCanvas();
-            // Save immediately after clearing
+            // Save immediately after clearing with empty canvas
             setTimeout(() => {
-                notebookUiRef.current.exportImage().then(dataUrl => {
+                const canvas = notebookUiRef.current.canvasRef?.current;
+                if (canvas) {
+                    // Create white background data URL for cleared canvas
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.fillStyle = '#ffffff';
+                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                    const dataUrl = tempCanvas.toDataURL('image/png');
                     saveNow(dataUrl);
-                });
+                }
             }, 100);
         }
     };
@@ -115,6 +135,31 @@ const NoteBookInteriorPage = () => {
         updatePageSettings(newSettings);
     };
 
+    // Fixed navigation handlers
+    const handlePreviousPage = async () => {
+        if (currentPageNumber > 1) {
+            // Save current page before navigating
+            if (notebookUiRef.current) {
+                const dataUrl = await notebookUiRef.current.exportImage();
+                await saveNow(dataUrl);
+            }
+            // Navigate to previous page
+            await navigateToPage(currentPageNumber - 1);
+        }
+    };
+
+    const handleNextPage = async () => {
+        if (notebook && currentPageNumber < notebook.pages) {
+            // Save current page before navigating
+            if (notebookUiRef.current) {
+                const dataUrl = await notebookUiRef.current.exportImage();
+                await saveNow(dataUrl);
+            }
+            // Navigate to next page
+            await navigateToPage(currentPageNumber + 1);
+        }
+    };
+
     // Keyboard shortcuts for page navigation
     useEffect(() => {
         const handleKeyPress = (e) => {
@@ -122,11 +167,11 @@ const NoteBookInteriorPage = () => {
                 switch (e.key) {
                     case 'ArrowLeft':
                         e.preventDefault();
-                        previousPage();
+                        handlePreviousPage();
                         break;
                     case 'ArrowRight':
                         e.preventDefault();
-                        nextPage();
+                        handleNextPage();
                         break;
                     case 's':
                         e.preventDefault();
@@ -145,7 +190,7 @@ const NoteBookInteriorPage = () => {
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [previousPage, nextPage, saveNow]);
+    }, [currentPageNumber, notebook, saveNow]);
 
     if (loading) {
         return (
@@ -181,34 +226,9 @@ const NoteBookInteriorPage = () => {
                     setIsPen={setIsPen}
                 />
 
-                {/* Page Navigation */}
-                <div className={styles.page_navigation}>
-                    <button
-                        onClick={previousPage}
-                        disabled={currentPageNumber <= 1}
-                        className={styles.nav_button}
-                    >
-                        ← Previous
-                    </button>
-
-                    <span className={styles.page_info}>
-                        Page {currentPageNumber} of {notebook.pages}
-                    </span>
-
-                    <button
-                        onClick={nextPage}
-                        disabled={currentPageNumber >= notebook.pages}
-                        className={styles.nav_button}
-                    >
-                        Next →
-                    </button>
-
-                    <button
-                        onClick={addNewPage}
-                        className={styles.add_page_button}
-                    >
-                        + Add Page
-                    </button>
+                {/* Page Info in Toolbar */}
+                <div className={styles.page_info}>
+                    <span>Page {currentPageNumber} of {notebook.pages}</span>
                 </div>
 
                 {/* Save Status */}
@@ -218,58 +238,7 @@ const NoteBookInteriorPage = () => {
             </div>
 
             <div className={styles.notebook_interior_ui}>
-                <div className={styles.notebook_interior_canvas}>
-                    <NoteBookUi
-                        ref={notebookUiRef}
-                        currentTool={currentTool}
-                        strokeColor={finalStrokeColor}
-                        strokeWidth={strokeWidth}
-                        eraserWidth={eraserWidth}
-                        pattern={pageSettings.pattern}
-                        patternSize={pageSettings.patternSize}
-                        patternColor={pageSettings.patternColor}
-                        patternOpacity={pageSettings.patternOpacity}
-                        onCanvasChange={handleCanvasChange}
-                    />
-                </div>
-
-                {/* Pen Settings Panel */}
-                <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden
-                    }`}>
-                    <PenSettingPanel
-                        onColorChange={handleColorChange}
-                        onStrokeWidthChange={handleStrokeWidthChange}
-                        onOpacityChange={handleOpacityChange}
-                        size={strokeWidth}
-                        color={strokeColor}
-                        opacity={opacity}
-                        setSize={setStrokeWidth}
-                        setColor={setStrokeColor}
-                        setOpacity={setOpacity}
-                    />
-
-                    <button
-                        className={styles.panel_toggle}
-                        onClick={() => setIsPenPanelVisible(!isPenPanelVisible)}
-                        title={isPenPanelVisible ? "Hide pen settings" : "Show pen settings"}
-                    >
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={isPenPanelVisible ? styles.rotate : ''}
-                        >
-                            <path d="m9 18 6-6-6-6" />
-                        </svg>
-                    </button>
-                </div>
-
-                {/* Page Settings Panel */}
+                {/* Page Settings Panel (Left side) */}
                 <div className={`${styles.notebook_interior_page_setting_panel} ${isPagePanelVisible ? styles.visible : styles.hidden
                     }`}>
                     <PageSettingPanel
@@ -304,6 +273,81 @@ const NoteBookInteriorPage = () => {
                             className={isPagePanelVisible ? '' : styles.rotate}
                         >
                             <path d="m15 18-6-6 6-6" />
+                        </svg>
+                    </button>
+                </div>
+
+                {/* Left page navigation */}
+                <div className={`${styles.page_navigation} ${styles.left}`}>
+                    <button
+                        onClick={handlePreviousPage}
+                        disabled={currentPageNumber <= 1}
+                        className={styles.nav_button}
+                        title="Previous page"
+                    >
+                        <ChevronLeft size={24} />
+                    </button>
+                </div>
+
+                <div className={styles.notebook_interior_canvas}>
+                    <NoteBookUi
+                        ref={notebookUiRef}
+                        currentTool={currentTool}
+                        strokeColor={finalStrokeColor}
+                        strokeWidth={strokeWidth}
+                        eraserWidth={eraserWidth}
+                        pattern={pageSettings.pattern}
+                        patternSize={pageSettings.patternSize}
+                        patternColor={pageSettings.patternColor}
+                        patternOpacity={pageSettings.patternOpacity}
+                        onCanvasChange={handleCanvasChange}
+                    />
+                </div>
+
+                {/* Right page navigation */}
+                <div className={`${styles.page_navigation} ${styles.right}`}>
+                    <button
+                        onClick={handleNextPage}
+                        disabled={currentPageNumber >= notebook.pages}
+                        className={styles.nav_button}
+                        title="Next page"
+                    >
+                        <ChevronRight size={24} />
+                    </button>
+                </div>
+
+                {/* Pen Settings Panel (Right side) */}
+                <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden
+                    }`}>
+                    <PenSettingPanel
+                        onColorChange={handleColorChange}
+                        onStrokeWidthChange={handleStrokeWidthChange}
+                        onOpacityChange={handleOpacityChange}
+                        size={strokeWidth}
+                        color={strokeColor}
+                        opacity={opacity}
+                        setSize={setStrokeWidth}
+                        setColor={setStrokeColor}
+                        setOpacity={setOpacity}
+                    />
+
+                    <button
+                        className={styles.panel_toggle}
+                        onClick={() => setIsPenPanelVisible(!isPenPanelVisible)}
+                        title={isPenPanelVisible ? "Hide pen settings" : "Show pen settings"}
+                    >
+                        <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className={isPenPanelVisible ? styles.rotate : ''}
+                        >
+                            <path d="m9 18 6-6-6-6" />
                         </svg>
                     </button>
                 </div>
