@@ -103,7 +103,7 @@ const SmoothCanvas = forwardRef(({
         engineRef.current.destroy();
       }
     };
-  }, []);
+  }, []); // Empty dependency array for initialization only
 
   // Update options when props change
   useEffect(() => {
@@ -257,16 +257,6 @@ const SmoothCanvas = forwardRef(({
             height: eraserWidth * 2,
             left: eraserPosition.x - eraserWidth,
             top: eraserPosition.y - eraserWidth,
-            position: 'absolute',
-            border: '2px solid #ef4444',
-            borderRadius: '50%',
-            pointerEvents: 'none',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            zIndex: 10,
-            // Enhanced animation
-            animation: 'eraserPulse 1.5s infinite ease-in-out',
-            // Add inner ring for better visibility
-            boxShadow: 'inset 0 0 0 2px rgba(239, 68, 68, 0.3)'
           }}
         />
       )}
