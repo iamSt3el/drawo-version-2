@@ -48,7 +48,47 @@ export class CanvasRenderer {
     );
   }
 
-  
+  renderBackgroundImage(backgroundImageUrl, width, height) {
+    if (!backgroundImageUrl) return null;
 
-  
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: `url(${backgroundImageUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.1,
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
+    );
+  }
+
+  renderGrid(width, height, gridSize = 20, gridColor = '#e5e7eb') {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: `
+            linear-gradient(to right, ${gridColor} 1px, transparent 1px),
+            linear-gradient(to bottom, ${gridColor} 1px, transparent 1px)
+          `,
+          backgroundSize: `${gridSize}px ${gridSize}px`,
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
+    );
+  }
 }

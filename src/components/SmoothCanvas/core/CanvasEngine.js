@@ -1,3 +1,4 @@
+// src/components/SmoothCanvas/core/CanvasEngine.js
 
 export class CanvasEngine {
   constructor(canvasRef, svgRef, options = {}) {
@@ -46,17 +47,19 @@ export class CanvasEngine {
   }
 
   getStrokeOptions(inputType, strokeWidth) {
+    // These are the key settings for smooth fast lines
     const baseOptions = {
       size: strokeWidth,
-      smoothing: 0.5,
-      streamline: 0.5,
-      easing: (t) => t,
+      smoothing: 0.5,    // Medium smoothing - don't over-smooth
+      streamline: 0.5,   // Medium streamline - helps with fast movements
+      //easing: (t) => t,  // Linear easing
+      last: true,        // Process as final stroke
       start: { 
-        taper: strokeWidth * 0.5,
+        taper: 0,        // No taper at start
         cap: true 
       },
       end: { 
-        taper: strokeWidth * 2,
+        taper: strokeWidth * 0.75,  // Small taper at end
         cap: true 
       }
     };
@@ -64,36 +67,18 @@ export class CanvasEngine {
     if (inputType === 'pen') {
       return {
         ...baseOptions,
-        thinning: 0.7,
-        simulatePressure: false,
-        smoothing: 0.5,
-        streamline: 0.2,
-        start: { 
-          //taper: strokeWidth * 0.3,
-          taper:5,
-          cap: true 
-        },
-        end: { 
-          //taper: strokeWidth * 2.5,
-          taper: 0,
-          cap: true 
-        }
+        thinning: 0.9,              // Moderate pen pressure response
+        simulatePressure: false,    // Use real pressure
+        smoothing: 0.2,             // Less smoothing for pen precision
+        streamline: 0.0,            // More streamline for pen smoothness
       };
     } else {
       return {
         ...baseOptions,
-        thinning: 0.4,
-        simulatePressure: true,
-        smoothing: 0.6,
-        streamline: 0.5,
-        start: { 
-          taper: strokeWidth * 0.5, 
-          cap: true 
-        },
-        end: { 
-          taper: strokeWidth * 2,
-          cap: true 
-        }
+        thinning: 0.3,              // Less pressure variation for mouse
+        simulatePressure: true,     // Simulate pressure for mouse
+        smoothing: 0.5,             // Medium smoothing for mouse
+        streamline: 0.5,            // Medium streamline for mouse
       };
     }
   }
@@ -127,7 +112,12 @@ export class CanvasEngine {
     
     if (type === 'pen') {
       pressure = e.pressure || 0.5;
-      pressure = Math.max(0.2, Math.min(0.9, pressure));
+      // Handle case where tablet reports 0 pressure (like Xiaomi tablets)
+      if (pressure === 0) {
+        pressure = 0.5; // Default pressure
+        this.inputType = 'mouse'; // Fall back to mouse simulation
+      }
+      pressure = Math.max(0.1, Math.min(1.0, pressure));
     } else if (type === 'touch') {
       pressure = 0.6;
     } else {
@@ -140,16 +130,21 @@ export class CanvasEngine {
   createSmoothEnding(points) {
     if (points.length < 2) return points;
     
-    const lastPoint = points[points.length - 1];
     const smoothPoints = [...points];
-    const taperSteps = Math.min(3, this.options.strokeWidth / 2);
     
-    for (let i = 1; i <= taperSteps; i++) {
-      const t = i / (taperSteps + 1);
-      const pressure = lastPoint[2] * (1 - t * 0.8);
-      const x = lastPoint[0];
-      const y = lastPoint[1];
-      smoothPoints.push([x, y, Math.max(0.1, pressure)]);
+    // Simple ending - just ensure the last point has the right pressure
+    if (smoothPoints.length > 0) {
+      const lastPoint = smoothPoints[smoothPoints.length - 1];
+      // Gradually reduce pressure for the last few points if there are enough
+      const taperPoints = Math.min(3, Math.floor(smoothPoints.length * 0.1));
+      
+      for (let i = taperPoints; i > 0; i--) {
+        const index = smoothPoints.length - i;
+        if (index >= 0 && index < smoothPoints.length) {
+          const t = i / taperPoints;
+          smoothPoints[index][2] = lastPoint[2] * (1 - t * 0.7);
+        }
+      }
     }
     
     return smoothPoints;
