@@ -67,10 +67,10 @@ export class CanvasEngine {
     if (inputType === 'pen') {
       return {
         ...baseOptions,
-        thinning: 0.9,              // Moderate pen pressure response
+        thinning: 0.3,              // Moderate pen pressure response
         simulatePressure: false,    // Use real pressure
-        smoothing: 0.2,             // Less smoothing for pen precision
-        streamline: 0.0,            // More streamline for pen smoothness
+        smoothing: 0.3,             // Less smoothing for pen precision
+        streamline: 0.9,            // More streamline for pen smoothness
       };
     } else {
       return {
