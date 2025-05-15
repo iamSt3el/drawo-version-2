@@ -1,6 +1,6 @@
 // hooks/useNotebookData.js - Custom hook for notebook data management
 import { useState, useEffect, useCallback } from 'react';
-import { useNotebooks } from '../context/NotebookContext';
+import { useNotebooks } from '../context/NotebookContextWithFS'; // ✅ Fixed import
 
 export const useNotebookData = (notebookId) => {
   const {
