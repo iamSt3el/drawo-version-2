@@ -1,3 +1,41 @@
+// Force maximum z-index and enable all pointer events - FIX FOR CLICKING ISSUE
+.formOverlay {
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  
+  * {
+    pointer-events: auto !important;
+  }
+}
+
+.notebookFormContainer {
+  z-index: 999999 !important;
+  pointer-events: auto !important;
+}
+
+.formInput,
+.formTextarea {
+  pointer-events: auto !important;
+  cursor: text !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  
+  &:focus {
+    outline: 2px solid #8b5cf6 !important;
+    outline-offset: 2px !important;
+  }
+  
+  &:hover {
+    cursor: text !important;
+  }
+}
+
+// Original SCSS styles below
 // Form overlay styles (for Header component)
 .formOverlay {
   position: fixed;
@@ -397,3 +435,4 @@
     }
   }
 }
+

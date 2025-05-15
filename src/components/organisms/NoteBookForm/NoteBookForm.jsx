@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './NoteBookForm.module.scss';
 import { X } from 'lucide-react';
 import { useNotebooks } from '../../../context/NotebookContext';
@@ -6,22 +7,16 @@ import { useNotebooks } from '../../../context/NotebookContext';
 const NotebookForm = ({ onClose }) => {
   const { addNotebook } = useNotebooks();
   
-  // Character limits for title and description
   const TITLE_MAX_LENGTH = 30;
   const DESCRIPTION_MAX_LENGTH = 120;
   
-  // Initialize form data with a function to ensure fresh state each time
-  const getInitialFormData = () => ({
+  const [formData, setFormData] = useState({
     title: '',
     description: '',
     color: '#8b5cf6',
     pages: 100
   });
-
-  const [formData, setFormData] = useState(getInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const formRef = useRef(null);
 
   const presetColors = [
     { color: '#8b5cf6', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)' },
@@ -34,64 +29,9 @@ const NotebookForm = ({ onClose }) => {
     { color: '#f97316', gradient: 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)' }
   ];
 
-  // Reset form when component mounts (when modal opens)
-  useEffect(() => {
-    setFormData(getInitialFormData());
-    setIsSubmitting(false);
-    
-    // Focus on the first input after a short delay to ensure DOM is ready
-    const timer = setTimeout(() => {
-      const titleInput = document.getElementById('title');
-      if (titleInput) {
-        titleInput.focus();
-      }
-    }, 100);
-    
-    return () => clearTimeout(timer);
-  }, []); // Empty dependency array means this runs only on mount
-
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [onClose]);
-
-  // Handle clicks outside the form
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (formRef.current && !formRef.current.contains(event.target)) {
-        onClose();
-      }
-    };
-
-    // Add a delay before adding the event listener to prevent immediate closing
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
-    
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [onClose]);
-
-  // Handle overlay click
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
-    // Apply character limits
     let finalValue = value;
     if (name === 'title' && value.length > TITLE_MAX_LENGTH) {
       finalValue = value.slice(0, TITLE_MAX_LENGTH);
@@ -117,7 +57,6 @@ const NotebookForm = ({ onClose }) => {
     setIsSubmitting(true);
 
     try {
-      // Create the notebook data
       const notebookData = {
         ...formData,
         date: new Date().toLocaleDateString('en-GB', {
@@ -127,18 +66,7 @@ const NotebookForm = ({ onClose }) => {
         })
       };
 
-      // Add the notebook using context
-      const newNotebook = addNotebook(notebookData);
-      
-      console.log('Notebook created:', newNotebook);
-      
-      // You can replace alert with a toast notification if you want
-      alert('Notebook created successfully!');
-      
-      // Reset form data before closing
-      setFormData(getInitialFormData());
-      
-      // Close the form
+      addNotebook(notebookData);
       onClose();
     } catch (error) {
       console.error('Error creating notebook:', error);
@@ -148,25 +76,16 @@ const NotebookForm = ({ onClose }) => {
     }
   };
 
-  // Prevent form container clicks from bubbling to overlay
-  const handleFormClick = (e) => {
-    e.stopPropagation();
-  };
-
-  return (
-    <div className={styles.formOverlay} onClick={handleOverlayClick}>
-      <div 
-        className={styles.notebookFormContainer} 
-        ref={formRef}
-        onClick={handleFormClick}
-      >
+  // The modal content
+  const modalContent = (
+    <div className={styles.formOverlay}>
+      <div className={styles.notebookFormContainer}>
         <div className={styles.formHeader}>
           <h2 className={styles.formTitle}>Create New Notebook</h2>
           <button 
             type="button"
             className={styles.closeButton} 
             onClick={onClose} 
-            aria-label="Close"
             disabled={isSubmitting}
           >
             <X size={18} />
@@ -196,6 +115,8 @@ const NotebookForm = ({ onClose }) => {
                 required
                 disabled={isSubmitting}
                 maxLength={TITLE_MAX_LENGTH}
+                autoComplete="off"
+                autoFocus
               />
             </div>
             
@@ -241,6 +162,7 @@ const NotebookForm = ({ onClose }) => {
               required
               disabled={isSubmitting}
               maxLength={DESCRIPTION_MAX_LENGTH}
+              autoComplete="off"
             />
           </div>
 
@@ -255,7 +177,7 @@ const NotebookForm = ({ onClose }) => {
                     formData.color === colorItem.color ? styles.selected : ''
                   } ${isSubmitting ? styles.disabled : ''}`}
                   style={{ background: colorItem.gradient }}
-                  onClick={() => !isSubmitting && handleColorSelect(colorItem.color)}
+                  onClick={() => handleColorSelect(colorItem.color)}
                 />
               ))}
             </div>
@@ -282,6 +204,9 @@ const NotebookForm = ({ onClose }) => {
       </div>
     </div>
   );
+
+  // Render the modal using createPortal directly to document.body
+  return createPortal(modalContent, document.body);
 };
 
 export default NotebookForm;

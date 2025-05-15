@@ -9,26 +9,25 @@ const Header = () => {
   const [showForm, setShowForm] = useState(false);
 
   const handleCreateNotebook = () => {
-    setShowForm(true);
+
+    // Clear any potential event listeners by forcing a reflow
+    setTimeout(() => {
+      setShowForm(true);
+    }, 0);
   };
 
   const handleCloseForm = () => {
     setShowForm(false);
-  };
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (showForm) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
     
-    // Cleanup on unmount
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showForm]);
+    // Clear focus and force reflow after closing
+    setTimeout(() => {
+      if (document.activeElement && document.activeElement !== document.body) {
+        document.activeElement.blur();
+      }
+      // Force garbage collection of any remaining event listeners
+      window.dispatchEvent(new Event('resize'));
+    }, 100);
+  };
 
   return (
     <>
@@ -46,9 +45,12 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Render the form without forcing key changes */}
+      {/* Use timestamp as key to ensure completely fresh component */}
       {showForm && (
-        <NotebookForm onClose={handleCloseForm} />
+        <NotebookForm 
+          key={`form-${Date.now()}`} 
+          onClose={handleCloseForm} 
+        />
       )}
     </>
   )

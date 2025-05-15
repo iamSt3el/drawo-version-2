@@ -1,0 +1,40 @@
+.toolbar_cover {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+
+  .toolbar_back_button {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    background-color: #f8fafc;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+    box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+
+
+    // Add any additional positioning if needed
+  }
+
+  .toolbar_tools_cover {
+    display: inline-flex;
+    padding: 1rem;
+
+    .toolbar_tools {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.5rem 1rem;
+      background-color: #f8fafc;
+      border-radius: 0.5rem;
+      box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+      box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+      transition: all 0.3s ease-in-out;
+      cursor: pointer;
+    }
+  }
+}

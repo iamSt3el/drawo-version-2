@@ -47,6 +47,7 @@
     "lucide-react": "^0.510.0",
     "react-router-dom": "^7.6.0",
     "sass": "^1.88.0",
+    "tldraw": "^3.12.2",
     "wait-on": "^8.0.3"
   },
   "main": "public/electron.js",

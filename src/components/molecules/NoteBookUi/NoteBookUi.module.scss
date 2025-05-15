@@ -1,0 +1,41 @@
+.notebookui_cover {
+    background-color: white; // Changed from azure for notebook look
+    background-image:
+        linear-gradient(to right, #e5e7eb 1px, transparent 1px),
+        linear-gradient(to bottom, #e5e7eb 1px, transparent 1px);
+    background-size: 20px 20px;
+    width: 900px;
+    height: 900px;
+    justify-self: center;
+    border-radius: 20px;
+
+    border-radius: 20px;
+    box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+
+    .notebookui_holes_div {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 10px;
+        padding-left: 10px;
+
+        .notebookui_holes {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background-color: #D9D9D9;
+
+            box-shadow:
+                inset 3px 2px 0px 0px rgba(0, 0, 0, 0.25),
+                0 1px 2px rgba(255, 255, 255, 0.3);
+        }
+    }
+}
+
+
+@media screen and (max-width: 868px) {
+    .notebookui_cover {
+        width: 700px;
+        height: 800px;
+    }
+}
