@@ -17,7 +17,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "electron-dev": "concurrently \"BROWSER=none yarn start\" \"wait-on http://localhost:3000 && electron .\"",
+    "electron-dev": "concurrently \"BROWSER=none yarn start\" \"wait-on http://localhost:3000 && ELECTRON_OZONE_PLATFORM_HINT=x11 electron .\"",
     "electron-pack": "build -c.extraMetadata.main=build/electron.js -mlw",
     "preelectron-pack": "yarn build"
   },
@@ -45,6 +45,7 @@
     "electron-builder": "^26.0.12",
     "electron-is-dev": "^3.0.1",
     "lucide-react": "^0.510.0",
+    "perfect-freehand": "^1.2.2",
     "react-router-dom": "^7.6.0",
     "sass": "^1.88.0",
     "tldraw": "^3.12.2",

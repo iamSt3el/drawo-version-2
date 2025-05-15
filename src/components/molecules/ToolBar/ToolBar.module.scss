@@ -1,3 +1,4 @@
+// src/components/molecules/ToolBar/ToolBar.module.scss
 .toolbar_cover {
   display: flex;
   flex-direction: column;
@@ -11,13 +12,9 @@
     background-color: #f8fafc;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
     box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
     transition: all 0.3s ease-in-out;
     cursor: pointer;
-
-
-    // Add any additional positioning if needed
   }
 
   .toolbar_tools_cover {
@@ -31,10 +28,146 @@
       padding: 0.5rem 1rem;
       background-color: #f8fafc;
       border-radius: 0.5rem;
-      box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
       box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
       transition: all 0.3s ease-in-out;
       cursor: pointer;
+      flex-wrap: wrap;
+      max-width: 80vw;
+      justify-content: center;
+    }
+  }
+}
+
+// Color picker styles
+.color_picker_container {
+  position: relative;
+}
+
+.color_picker {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 10px;
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  z-index: 1000;
+
+  .color_grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    
+    .color_option {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+      
+      &.active {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+      }
+    }
+  }
+}
+
+// Stroke width control styles
+.stroke_width_container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  
+  .stroke_width_label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    white-space: nowrap;
+  }
+  
+  .stroke_width_slider {
+    width: 80px;
+    height: 4px;
+    border-radius: 2px;
+    background: #e5e7eb;
+    outline: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    
+    &::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.2);
+      }
+    }
+    
+    &::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #3b82f6;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    }
+  }
+}
+
+// Responsive design
+@media screen and (max-width: 768px) {
+  .toolbar_cover {
+    .toolbar_back_button {
+      left: 0.5rem;
+      top: 0.5rem;
+      padding: 0.25rem 0.5rem;
+    }
+    
+    .toolbar_tools_cover {
+      padding: 0.5rem;
+      
+      .toolbar_tools {
+        gap: 0.5rem;
+        padding: 0.25rem 0.5rem;
+        max-width: 95vw;
+      }
+    }
+  }
+  
+  .stroke_width_container {
+    padding: 0 8px;
+    
+    .stroke_width_slider {
+      width: 60px;
+    }
+  }
+  
+  .color_picker {
+    .color_grid {
+      .color_option {
+        width: 28px;
+        height: 28px;
+      }
     }
   }
 }

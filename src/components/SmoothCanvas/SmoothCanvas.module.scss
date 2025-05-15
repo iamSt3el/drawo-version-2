@@ -1,0 +1,196 @@
+// src/components/SmoothCanvas/SmoothCanvas.module.scss
+
+.canvasContainer {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  
+  // Optimize for high-performance drawing
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  
+  // Hardware acceleration for better performance
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  will-change: contents;
+  contain: layout style paint;
+  
+  // Ensure proper stacking context
+  isolation: isolate;
+  
+  // Tool-specific cursors
+  &.penMode {
+    cursor: crosshair;
+  }
+  
+  &.eraserMode {
+    cursor: none;
+  }
+  
+  &.pointerMode {
+    cursor: pointer;
+  }
+}
+
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  background: transparent;
+  
+  // Essential for pen/stylus input
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  
+  // Performance optimizations
+  will-change: transform;
+  contain: strict;
+  
+  // Crisp rendering for high DPI
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: pixelated;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+  
+  // Prevent context menu on right click
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  background: transparent;
+  
+  // SVG rendering optimizations
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+  color-rendering: auto;
+  
+  // Performance optimizations
+  will-change: contents;
+  contain: layout style paint;
+  
+  // Prevent capturing pointer events
+  pointer-events: none;
+  
+  // Optimize path rendering
+  path {
+    vector-effect: non-scaling-stroke;
+    shape-rendering: geometricPrecision;
+    fill-rule: nonzero;
+    
+    // Use fill instead of stroke for better performance
+    stroke: none;
+    
+    // Optimize temporary paths
+    &#temp-path {
+      opacity: 0.98; // Slight transparency for visual feedback
+      fill-rule: nonzero;
+      shape-rendering: optimizeSpeed; // Faster rendering
+      will-change: d; // Optimize for frequent updates
+      
+      // Reduce antialiasing for performance
+      shape-rendering: crispEdges;
+    }
+  }
+}
+
+// Eraser cursor animation
+@keyframes eraserPulse {
+  0% {
+    transform: scale(1) translateZ(0);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05) translateZ(0);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1) translateZ(0);
+    opacity: 0.8;
+  }
+}
+
+// High DPI display optimizations
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .canvas,
+  .svg {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: pixelated;
+    
+    // Additional optimizations for high DPI
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
+    
+    // Ensure sharp text rendering
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+  }
+}
+
+// Pen input optimizations
+@media (pointer: fine) {
+  .canvasContainer {
+    .canvas,
+    .svg {
+      // Optimize for high precision pointing devices
+      touch-action: none;
+      -webkit-touch-callout: none;
+    }
+  }
+}
+
+// Touch device optimizations
+@media (pointer: coarse) {
+  .canvasContainer {
+    .canvas,
+    .svg {
+      touch-action: none;
+      -webkit-overflow-scrolling: touch;
+      
+      // Prevent zoom on double tap
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+  }
+}
+
+// Hover-capable devices
+@media (hover: hover) {
+  .canvasContainer {
+    transition: box-shadow 0.2s ease;
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .canvasContainer {
+    animation: none;
+    transition: none;
+  }
+  
+  @keyframes eraserPulse {
+    0%, 100% {
+      transform: scale(1) translateZ(0);
+      opacity: 0.8;
+    }
+  }
+}
