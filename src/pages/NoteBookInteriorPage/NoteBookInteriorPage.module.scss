@@ -2,4 +2,34 @@
     background-color: #F1F5F9;
     width: 100%;
     height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    .notebook_interior_canvas{
+        padding-left: 260px;
+        flex: 1;
+        background-color: #F1F5F9;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .notebook_interior_ui{
+        display: flex;
+
+        .notebook_interior_pen_setting_panel{
+            padding-right: 10px;
+            width: 200px; /* Fixed width for the panel */
+            min-width: 200px; /* Ensure it doesn't shrink */
+            opacity: 1;
+            transition: opacity 0.3s ease;
+            
+            /* When empty (no children), preserve space but make invisible */
+            &:empty {
+                opacity: 0;
+                pointer-events: none;
+            }
+        }
+    }
 }

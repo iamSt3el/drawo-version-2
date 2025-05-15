@@ -59,7 +59,7 @@ export class CanvasEngine {
         cap: true 
       },
       end: { 
-        taper: strokeWidth * 0.75,  // Small taper at end
+        taper: strokeWidth * 0,  // Small taper at end
         cap: true 
       }
     };

@@ -14,9 +14,7 @@ const SmoothCanvas = forwardRef(({
   eraserWidth = 10,
   onCanvasChange,
   backgroundImageUrl = null,
-  showGrid = false,
-  gridSize = 20,
-  gridColor = '#e5e7eb'
+
 }, ref) => {
   const canvasRef = useRef(null);
   const svgRef = useRef(null);

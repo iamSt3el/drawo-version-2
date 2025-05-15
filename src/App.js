@@ -9,8 +9,8 @@ function App() {
     <NotebookProvider>
       <Router initialEntries={['/']} initialIndex={0}>
         <Routes>
-          <Route path="/" element={<NoteBookManagerPage />} />
-          <Route path="/notebook-interior/:id" element={<NoteBookInteriorPage />} />
+          {/*<Route path="/" element={<NoteBookManagerPage />} />*/}
+          <Route path="/" element={<NoteBookInteriorPage />} />
         </Routes>
       </Router>
     </NotebookProvider>
