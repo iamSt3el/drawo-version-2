@@ -1,14 +1,13 @@
 // src/components/molecules/NoteBookUi/NoteBookUi.jsx
 import React, { useState, useEffect, useRef } from 'react'
 import styles from './NoteBookUi.module.scss'
-import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
+import FabricCanvasOfficial from '../../FabricCanvas/FabricCanvas'
 
 const NoteBookUi = ({ 
   onCanvasChange,
   currentTool = 'pen',
   strokeColor = '#000000',
   strokeWidth = 5,
-  eraserWidth = 10
 }) => {
   const canvasRef = useRef(null);
   const [numberOfHoles, setNumberOfHoles] = useState(25);
@@ -73,18 +72,14 @@ const NoteBookUi = ({
       </div>
 
       <div className={styles.notebookui_content}>
-        <SmoothCanvas
+        <FabricCanvasOfficial
           ref={canvasRef}
           width={canvasSize.width}
           height={canvasSize.height}
           currentTool={currentTool}
           strokeColor={strokeColor}
           strokeWidth={strokeWidth}
-          eraserWidth={eraserWidth}
           onCanvasChange={handleCanvasChange}
-          showGrid={true}
-          gridSize={20}
-          gridColor="#e5e7eb"
         />
       </div>
     </div>
@@ -99,7 +94,8 @@ export const useNoteBookUi = () => {
     ref,
     clearCanvas: () => ref.current?.clearCanvas(),
     undo: () => ref.current?.undo(),
-    exportImage: (format) => ref.current?.exportImage(format)
+    exportImage: (format) => ref.current?.exportImage(format),
+    setBrushType: (brushType) => ref.current?.setBrushType(brushType),
   };
 };
 

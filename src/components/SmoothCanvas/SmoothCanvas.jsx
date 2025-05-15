@@ -79,8 +79,17 @@ const SmoothCanvas = forwardRef(({
       }
     });
 
-    // Attach event listeners
-    eventHandler.attachListeners(canvasRef.current);
+    // Attach event listeners with passive options for better performance
+    const element = canvasRef.current;
+    element.style.touchAction = 'none';
+    element.style.msTouchAction = 'none';
+    
+    // Add specific optimizations for writing
+    element.style.webkitUserSelect = 'none';
+    element.style.userSelect = 'none';
+    element.style.webkitTouchCallout = 'none';
+    
+    eventHandler.attachListeners(element);
 
     engineRef.current = engine;
     eventHandlerRef.current = eventHandler;
@@ -186,8 +195,9 @@ const SmoothCanvas = forwardRef(({
     >
       {/* Background layers */}
       {backgroundImageUrl && rendererRef.current?.renderBackgroundImage(backgroundImageUrl, width, height)}
+      {showGrid && rendererRef.current?.renderGrid(width, height, gridSize, gridColor)}
       
-      {/* Canvas for potential raster operations */}
+      {/* Canvas for optimal touch/pen input */}
       <canvas
         ref={canvasRef}
         width={width * dpr}
@@ -195,12 +205,16 @@ const SmoothCanvas = forwardRef(({
         className={styles.canvas}
         style={{
           touchAction: 'none',
+          msTouchAction: 'none',
           width: `${width}px`,
-          height: `${height}px`
+          height: `${height}px`,
+          // Ensure pixel-perfect rendering
+          imageRendering: 'pixelated',
+          imageRendering: '-webkit-optimize-contrast'
         }}
       />
 
-      {/* SVG for vector drawing */}
+      {/* SVG for vector drawing with optimized settings */}
       <svg
         ref={svgRef}
         width={width}
@@ -209,16 +223,53 @@ const SmoothCanvas = forwardRef(({
         className={styles.svg}
         style={{
           pointerEvents: 'none',
-          shapeRendering: 'geometricPrecision'
+          shapeRendering: 'geometricPrecision',
+          // Optimize for crisp strokes
+          textRendering: 'geometricPrecision',
+          colorRendering: 'optimizeQuality'
         }}
       >
-        {/* Render paths */}
-        {rendererRef.current?.renderPaths()}
+        {/* Render paths with enhanced settings */}
+        {rendererRef.current && paths.map((pathObj) => (
+          <path
+            key={pathObj.id}
+            d={pathObj.pathData}
+            fill={pathObj.color}
+            stroke="none"
+            fillRule="nonzero"
+            style={{
+              opacity: pathsToErase.has(pathObj.id) ? 0.3 : 1,
+              transition: 'opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+              // Optimize path rendering
+              vectorEffect: 'non-scaling-stroke',
+              shapeRendering: pathObj.isSinglePoint ? 'auto' : 'geometricPrecision'
+            }}
+          />
+        ))}
       </svg>
 
-      {/* Eraser cursor */}
-      {currentTool === 'eraser' && showEraser && 
-        rendererRef.current?.renderEraserCursor(showEraser, eraserPosition, eraserWidth)}
+      {/* Enhanced eraser cursor */}
+      {currentTool === 'eraser' && showEraser && (
+        <div
+          className={styles.eraserCursor}
+          style={{
+            width: eraserWidth * 2,
+            height: eraserWidth * 2,
+            left: eraserPosition.x - eraserWidth,
+            top: eraserPosition.y - eraserWidth,
+            position: 'absolute',
+            border: '2px solid #ef4444',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            zIndex: 10,
+            // Enhanced animation
+            animation: 'eraserPulse 1.5s infinite ease-in-out',
+            // Add inner ring for better visibility
+            boxShadow: 'inset 0 0 0 2px rgba(239, 68, 68, 0.3)'
+          }}
+        />
+      )}
     </div>
   );
 });

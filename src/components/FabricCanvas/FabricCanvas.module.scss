@@ -1,0 +1,75 @@
+// src/components/FabricCanvas/FabricCanvas.module.scss
+
+.canvasContainer {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    
+    // Optimize for smooth drawing
+    touch-action: none;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    
+    // Hardware acceleration
+    transform: translateZ(0);
+    will-change: contents;
+    
+    .fabricCanvas {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      
+      // Essential for smooth pen input
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      
+      // Prevent context menu
+      -webkit-touch-callout: none;
+      
+      // Optimize rendering
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
+      
+      cursor: crosshair;
+      
+      &:focus {
+        outline: none;
+      }
+    }
+  }
+  
+  // Responsive design
+  @media (max-width: 768px) {
+    .canvasContainer {
+      padding: 10px;
+      
+      .fabricCanvas {
+        max-width: 100%;
+        height: auto;
+      }
+    }
+  }
+  
+  // Dark mode support
+  @media (prefers-color-scheme: dark) {
+    .canvasContainer {
+      .fabricCanvas {
+        border-color: #374151;
+      }
+    }
+  }
+  
+  // High DPI optimization
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .fabricCanvas {
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: pixelated;
+    }
+  }

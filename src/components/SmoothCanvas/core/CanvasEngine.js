@@ -29,6 +29,11 @@ export class CanvasEngine {
     this.pathsToErase = new Set();
     this.pathBBoxes = new Map();
     
+    // Enhanced smoothing properties
+    this.smoothingBuffer = [];
+    this.lastVelocity = { x: 0, y: 0 };
+    this.velocityFilter = 0.4; // Lower = more smoothing
+    
     this.dpr = window.devicePixelRatio || 1;
     
     this.initializeCanvas();
@@ -47,18 +52,19 @@ export class CanvasEngine {
     ctx.scale(this.dpr, this.dpr);
   }
 
+  // Enhanced stroke options with better curves and pressure handling
   getStrokeOptions(inputType, strokeWidth) {
     const baseOptions = {
       size: strokeWidth,
-      smoothing: 0.5,
-      streamline: 0.5,
-      easing: (t) => t,
+      smoothing: 0.75, // Increased for smoother curves
+      streamline: 0.65, // Better streamlining
+      easing: (t) => Math.sin((t * Math.PI) / 2), // Smoother easing
       start: { 
-        taper: strokeWidth * 0.5,
+        taper: strokeWidth * 0.25,
         cap: true 
       },
       end: { 
-        taper: strokeWidth * 2,
+        taper: strokeWidth * 1.5,
         cap: true 
       }
     };
@@ -66,32 +72,36 @@ export class CanvasEngine {
     if (inputType === 'pen') {
       return {
         ...baseOptions,
-        thinning: 0.3,
+        thinning: 0.6, // More responsive to pressure
         simulatePressure: false,
-        smoothing: 0.9,
-        streamline: 0.6,
+        smoothing: 0.85,
+        streamline: 0.75,
         start: { 
-          taper: strokeWidth * 0.3,
+          taper: strokeWidth * 0.15,
           cap: true 
         },
         end: { 
-          taper: strokeWidth * 2.5,
+          taper: strokeWidth * 2,
           cap: true 
+        },
+        // Add custom pressure curve
+        pressureCurve: (pressure) => {
+          return Math.min(1, Math.max(0.1, Math.pow(pressure, 0.5)));
         }
       };
     } else {
       return {
         ...baseOptions,
-        thinning: 0.4,
+        thinning: 0.5,
         simulatePressure: true,
-        smoothing: 0.6,
-        streamline: 0.5,
+        smoothing: 0.7,
+        streamline: 0.6,
         start: { 
-          taper: strokeWidth * 0.5, 
+          taper: strokeWidth * 0.3, 
           cap: true 
         },
         end: { 
-          taper: strokeWidth * 2,
+          taper: strokeWidth * 1.8,
           cap: true 
         }
       };
@@ -105,14 +115,28 @@ export class CanvasEngine {
     const [first, ...rest] = stroke;
     d.push('M', first[0].toFixed(2), first[1].toFixed(2));
 
-    for (const [x, y] of rest) {
-      d.push('L', x.toFixed(2), y.toFixed(2));
+    // Use quadratic curves for smoother paths
+    if (rest.length > 0) {
+      for (let i = 0; i < rest.length; i++) {
+        const [x, y] = rest[i];
+        if (i === 0) {
+          d.push('L', x.toFixed(2), y.toFixed(2));
+        } else if (i < rest.length - 1) {
+          const [nextX, nextY] = rest[i + 1];
+          const cpX = (x + nextX) / 2;
+          const cpY = (y + nextY) / 2;
+          d.push('Q', x.toFixed(2), y.toFixed(2), cpX.toFixed(2), cpY.toFixed(2));
+        } else {
+          d.push('L', x.toFixed(2), y.toFixed(2));
+        }
+      }
     }
 
     d.push('Z');
     return d.join(' ');
   }
 
+  // Enhanced point extraction with velocity calculation
   getPointFromEvent(e) {
     const rect = this.canvasRef.current.getBoundingClientRect();
     const type = e.pointerType || 'mouse';
@@ -123,36 +147,153 @@ export class CanvasEngine {
     const x = (e.clientX - rect.left) / rect.width * this.options.width;
     const y = (e.clientY - rect.top) / rect.height * this.options.height;
     
+    // Calculate velocity for better pressure simulation
+    let velocity = 0;
+    if (this.lastPoint) {
+      const dx = x - this.lastPoint[0];
+      const dy = y - this.lastPoint[1];
+      velocity = Math.sqrt(dx * dx + dy * dy);
+      
+      // Apply velocity filtering for smoother motion
+      this.lastVelocity.x = this.lastVelocity.x * this.velocityFilter + dx * (1 - this.velocityFilter);
+      this.lastVelocity.y = this.lastVelocity.y * this.velocityFilter + dy * (1 - this.velocityFilter);
+    }
+    
     let pressure = 0.5;
     
     if (type === 'pen') {
       pressure = e.pressure || 0.5;
-      pressure = Math.max(0.2, Math.min(0.9, pressure));
+      // Enhance pressure sensitivity with velocity consideration
+      pressure = Math.max(0.15, Math.min(0.95, pressure));
+      // Reduce pressure for very fast movements
+      if (velocity > 5) {
+        pressure *= Math.max(0.5, 1 - (velocity - 5) / 20);
+      }
     } else if (type === 'touch') {
-      pressure = 0.6;
+      // Simulate pressure based on velocity for touch
+      pressure = Math.max(0.3, Math.min(0.8, 0.6 - velocity / 30));
     } else {
-      pressure = 0.8;
+      // Mouse - simulate pressure based on velocity
+      pressure = Math.max(0.4, Math.min(1.0, 0.8 - velocity / 25));
     }
 
     return [x, y, pressure];
+  }
+
+  // Improved smoothing with buffer
+  getSmoothedPoint(point) {
+    this.smoothingBuffer.push(point);
+    
+    // Keep only recent points for smoothing
+    if (this.smoothingBuffer.length > 5) {
+      this.smoothingBuffer.shift();
+    }
+    
+    if (this.smoothingBuffer.length < 2) {
+      return point;
+    }
+    
+    // Apply weighted average smoothing
+    let totalWeight = 0;
+    let smoothedX = 0;
+    let smoothedY = 0;
+    let smoothedPressure = 0;
+    
+    for (let i = 0; i < this.smoothingBuffer.length; i++) {
+      const weight = (i + 1) / this.smoothingBuffer.length; // More weight to recent points
+      const [x, y, pressure] = this.smoothingBuffer[i];
+      
+      smoothedX += x * weight;
+      smoothedY += y * weight;
+      smoothedPressure += pressure * weight;
+      totalWeight += weight;
+    }
+    
+    return [
+      smoothedX / totalWeight,
+      smoothedY / totalWeight,
+      smoothedPressure / totalWeight
+    ];
+  }
+
+  // Enhanced single point stroke creation
+  createSinglePointStroke(point, inputType, strokeWidth, color) {
+    const [x, y, pressure] = point;
+    const radius = (strokeWidth / 2) * pressure;
+    
+    // Create a small circle for single points
+    const circle = `M ${x - radius},${y} 
+                   A ${radius},${radius} 0 1,1 ${x + radius},${y} 
+                   A ${radius},${radius} 0 1,1 ${x - radius},${y} Z`;
+                   
+    // Add slight randomization for more natural feel
+    const jitterX = (Math.random() - 0.5) * 0.1;
+    const jitterY = (Math.random() - 0.5) * 0.1;
+    
+    const naturalCircle = `M ${x - radius + jitterX},${y + jitterY} 
+                          A ${radius},${radius} 0 1,1 ${x + radius + jitterX},${y + jitterY} 
+                          A ${radius},${radius} 0 1,1 ${x - radius + jitterX},${y + jitterY} Z`;
+    
+    return naturalCircle;
   }
 
   createSmoothEnding(points) {
     if (points.length < 2) return points;
     
     const lastPoint = points[points.length - 1];
+    const secondLastPoint = points[points.length - 2] || lastPoint;
     const smoothPoints = [...points];
-    const taperSteps = Math.min(3, this.options.strokeWidth / 2);
+    
+    // Calculate ending direction for natural taper
+    const dx = lastPoint[0] - secondLastPoint[0];
+    const dy = lastPoint[1] - secondLastPoint[1];
+    const magnitude = Math.sqrt(dx * dx + dy * dy);
+    
+    const taperSteps = Math.min(4, this.options.strokeWidth / 2);
     
     for (let i = 1; i <= taperSteps; i++) {
       const t = i / (taperSteps + 1);
-      const pressure = lastPoint[2] * (1 - t * 0.8);
-      const x = lastPoint[0];
-      const y = lastPoint[1];
-      smoothPoints.push([x, y, Math.max(0.1, pressure)]);
+      const pressure = lastPoint[2] * (1 - t * 0.9);
+      
+      // Extend slightly in the direction of movement for more natural ending
+      let x = lastPoint[0];
+      let y = lastPoint[1];
+      
+      if (magnitude > 0) {
+        const normalizedDx = dx / magnitude;
+        const normalizedDy = dy / magnitude;
+        x += normalizedDx * t * 2;
+        y += normalizedDy * t * 2;
+      }
+      
+      smoothPoints.push([x, y, Math.max(0.05, pressure)]);
     }
     
     return smoothPoints;
+  }
+
+  // Enhanced path addition with single point handling
+  addPath(pathData, color, strokeWidth, inputType, isSinglePoint = false) {
+    if (!pathData) return null;
+    
+    const newPath = {
+      id: this.nextPathId,
+      pathData,
+      color,
+      type: 'stroke',
+      inputType,
+      strokeWidth,
+      isSinglePoint
+    };
+    
+    const bbox = this.calculateBoundingBox(pathData);
+    if (bbox) {
+      this.pathBBoxes.set(this.nextPathId, bbox);
+    }
+    
+    this.paths.push(newPath);
+    this.nextPathId++;
+    return newPath;
   }
 
   calculateBoundingBox(pathData) {
@@ -197,32 +338,14 @@ export class CanvasEngine {
            eraserY <= expandedBbox.y + expandedBbox.height;
   }
 
-  addPath(pathData, color, strokeWidth, inputType) {
-    const newPath = {
-      id: this.nextPathId,
-      pathData,
-      color,
-      type: 'stroke',
-      inputType,
-      strokeWidth
-    };
-    
-    const bbox = this.calculateBoundingBox(pathData);
-    if (bbox) {
-      this.pathBBoxes.set(this.nextPathId, bbox);
-    }
-    
-    this.paths.push(newPath);
-    this.nextPathId++;
-    return newPath;
-  }
-
   clearPaths() {
     this.paths = [];
     this.pathBBoxes.clear();
     this.currentPath = [];
     this.pathsToErase.clear();
     this.nextPathId = 0;
+    this.smoothingBuffer = [];
+    this.lastVelocity = { x: 0, y: 0 };
   }
 
   undo() {
@@ -300,5 +423,6 @@ export class CanvasEngine {
       cancelAnimationFrame(this.frameRequest);
     }
     this.pathBBoxes.clear();
+    this.smoothingBuffer = [];
   }
 }
