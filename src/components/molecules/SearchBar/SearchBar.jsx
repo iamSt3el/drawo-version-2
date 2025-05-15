@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X } from 'lucide-react';
 import styles from './SearchBar.module.scss';
-import { useNotebooks } from '../../../context/NotebookContext';
+import { useNotebooks } from '../../../context/NotebookContextWithFS';
 
 const SearchBar = ({ placeholder = "Search your notebooks..." }) => {
   const { searchQuery, updateSearchQuery } = useNotebooks();

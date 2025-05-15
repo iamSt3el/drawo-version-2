@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './NoteBookForm.module.scss';
 import { X } from 'lucide-react';
-import { useNotebooks } from '../../../context/NotebookContext';
-
+import { useNotebooks } from '../../../context/NotebookContextWithFS';
 const NotebookForm = ({ onClose }) => {
   const { addNotebook } = useNotebooks();
-  
+
   const TITLE_MAX_LENGTH = 30;
   const DESCRIPTION_MAX_LENGTH = 120;
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -31,14 +30,14 @@ const NotebookForm = ({ onClose }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     let finalValue = value;
     if (name === 'title' && value.length > TITLE_MAX_LENGTH) {
       finalValue = value.slice(0, TITLE_MAX_LENGTH);
     } else if (name === 'description' && value.length > DESCRIPTION_MAX_LENGTH) {
       finalValue = value.slice(0, DESCRIPTION_MAX_LENGTH);
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [name]: finalValue
@@ -82,25 +81,24 @@ const NotebookForm = ({ onClose }) => {
       <div className={styles.notebookFormContainer}>
         <div className={styles.formHeader}>
           <h2 className={styles.formTitle}>Create New Notebook</h2>
-          <button 
+          <button
             type="button"
-            className={styles.closeButton} 
-            onClick={onClose} 
+            className={styles.closeButton}
+            onClick={onClose}
             disabled={isSubmitting}
           >
             <X size={18} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className={styles.notebookForm}>
           <div className={styles.formRow}>
             <div className={styles.formGroup}>
               <label className={styles.formLabel} htmlFor="title">
                 Notebook Title
-                <span className={`${styles.characterCount} ${
-                  formData.title.length > TITLE_MAX_LENGTH * 0.9 ? styles.danger : 
-                  formData.title.length > TITLE_MAX_LENGTH * 0.8 ? styles.warning : ''
-                }`}>
+                <span className={`${styles.characterCount} ${formData.title.length > TITLE_MAX_LENGTH * 0.9 ? styles.danger :
+                    formData.title.length > TITLE_MAX_LENGTH * 0.8 ? styles.warning : ''
+                  }`}>
                   {formData.title.length}/{TITLE_MAX_LENGTH}
                 </span>
               </label>
@@ -119,7 +117,7 @@ const NotebookForm = ({ onClose }) => {
                 autoFocus
               />
             </div>
-            
+
             <div className={styles.formGroup}>
               <label className={styles.formLabel} htmlFor="pages">
                 Pages
@@ -145,10 +143,9 @@ const NotebookForm = ({ onClose }) => {
           <div className={styles.formGroup}>
             <label className={styles.formLabel} htmlFor="description">
               Description
-              <span className={`${styles.characterCount} ${
-                formData.description.length > DESCRIPTION_MAX_LENGTH * 0.9 ? styles.danger : 
-                formData.description.length > DESCRIPTION_MAX_LENGTH * 0.8 ? styles.warning : ''
-              }`}>
+              <span className={`${styles.characterCount} ${formData.description.length > DESCRIPTION_MAX_LENGTH * 0.9 ? styles.danger :
+                  formData.description.length > DESCRIPTION_MAX_LENGTH * 0.8 ? styles.warning : ''
+                }`}>
                 {formData.description.length}/{DESCRIPTION_MAX_LENGTH}
               </span>
             </label>
@@ -168,14 +165,13 @@ const NotebookForm = ({ onClose }) => {
 
           <div className={styles.colorSection}>
             <div className={styles.colorSectionTitle}>Choose Color Theme</div>
-            
+
             <div className={styles.colorGrid}>
               {presetColors.map((colorItem, index) => (
                 <div
                   key={index}
-                  className={`${styles.colorOption} ${
-                    formData.color === colorItem.color ? styles.selected : ''
-                  } ${isSubmitting ? styles.disabled : ''}`}
+                  className={`${styles.colorOption} ${formData.color === colorItem.color ? styles.selected : ''
+                    } ${isSubmitting ? styles.disabled : ''}`}
                   style={{ background: colorItem.gradient }}
                   onClick={() => handleColorSelect(colorItem.color)}
                 />
@@ -184,16 +180,16 @@ const NotebookForm = ({ onClose }) => {
           </div>
 
           <div className={styles.formActions}>
-            <button 
-              type="button" 
-              onClick={onClose} 
+            <button
+              type="button"
+              onClick={onClose}
               className={styles.cancelBtn}
               disabled={isSubmitting}
             >
               Cancel
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className={styles.submitBtn}
               disabled={isSubmitting}
             >

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import styles from './NoteBookCard.module.scss'
 import { useNavigate } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
-import { useNotebooks } from '../../../context/NotebookContext'
+import { useNotebooks } from '../../../context/NotebookContextWithFS'; 
 import { createPortal } from 'react-dom'
 
 const NoteBookCard = ({ notebook }) => {
@@ -49,13 +49,13 @@ const NoteBookCard = ({ notebook }) => {
         <h3>Delete Notebook</h3>
         <p>Are you sure you want to delete "{title}"? This action cannot be undone.</p>
         <div className={styles.delete_modal_buttons}>
-          <button 
+          <button
             className={styles.cancel_button}
             onClick={handleCancelDelete}
           >
             Cancel
           </button>
-          <button 
+          <button
             className={styles.confirm_delete_button}
             onClick={handleConfirmDelete}
           >
@@ -83,8 +83,8 @@ const NoteBookCard = ({ notebook }) => {
               <div className={styles.notebook_card_date}>
                 <h4>{date}</h4>
               </div>
-              
-              <button 
+
+              <button
                 className={styles.delete_button}
                 onClick={handleDeleteClick}
                 title="Delete notebook"

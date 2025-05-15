@@ -7,7 +7,7 @@ import PenSettingPanel from '../../components/molecules/PenSettingPanel/PenSetti
 import PageSettingPanel from '../../components/molecules/PageSettingPanel/PageSettingPanel'
 import { useNotebookData } from '../../hooks/useNotebookData'
 import { useCanvasAutoSave } from '../../hooks/useCanvasAutoSave'
-import { useNotebooks } from '../../context/NotebookContext'
+import { useNotebooks } from '../../context/NotebookContextWithFS';
 
 const NoteBookInteriorPage = () => {
     const { id } = useParams();
@@ -44,7 +44,7 @@ const NoteBookInteriorPage = () => {
     const { debouncedSave, saveNow } = useCanvasAutoSave(saveCurrentPage, 3000);
 
     // Final stroke color that combines color and opacity
-    const finalStrokeColor = opacity < 100 
+    const finalStrokeColor = opacity < 100
         ? `rgba(${parseInt(strokeColor.slice(1, 3), 16)}, ${parseInt(strokeColor.slice(3, 5), 16)}, ${parseInt(strokeColor.slice(5, 7), 16)}, ${opacity / 100})`
         : strokeColor;
 
@@ -180,31 +180,31 @@ const NoteBookInteriorPage = () => {
                     onUndo={handleUndo}
                     setIsPen={setIsPen}
                 />
-                
+
                 {/* Page Navigation */}
                 <div className={styles.page_navigation}>
-                    <button 
-                        onClick={previousPage} 
+                    <button
+                        onClick={previousPage}
                         disabled={currentPageNumber <= 1}
                         className={styles.nav_button}
                     >
                         ← Previous
                     </button>
-                    
+
                     <span className={styles.page_info}>
                         Page {currentPageNumber} of {notebook.pages}
                     </span>
-                    
-                    <button 
-                        onClick={nextPage} 
+
+                    <button
+                        onClick={nextPage}
                         disabled={currentPageNumber >= notebook.pages}
                         className={styles.nav_button}
                     >
                         Next →
                     </button>
-                    
-                    <button 
-                        onClick={addNewPage} 
+
+                    <button
+                        onClick={addNewPage}
                         className={styles.add_page_button}
                     >
                         + Add Page
@@ -216,7 +216,7 @@ const NoteBookInteriorPage = () => {
                     Auto-save enabled
                 </div>
             </div>
-            
+
             <div className={styles.notebook_interior_ui}>
                 <div className={styles.notebook_interior_canvas}>
                     <NoteBookUi
@@ -232,11 +232,10 @@ const NoteBookInteriorPage = () => {
                         onCanvasChange={handleCanvasChange}
                     />
                 </div>
-                
+
                 {/* Pen Settings Panel */}
-                <div className={`${styles.notebook_interior_pen_setting_panel} ${
-                    isPenPanelVisible && isPen ? styles.visible : styles.hidden
-                }`}>
+                <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden
+                    }`}>
                     <PenSettingPanel
                         onColorChange={handleColorChange}
                         onStrokeWidthChange={handleStrokeWidthChange}
@@ -248,7 +247,7 @@ const NoteBookInteriorPage = () => {
                         setColor={setStrokeColor}
                         setOpacity={setOpacity}
                     />
-                    
+
                     <button
                         className={styles.panel_toggle}
                         onClick={() => setIsPenPanelVisible(!isPenPanelVisible)}
@@ -265,15 +264,14 @@ const NoteBookInteriorPage = () => {
                             strokeLinejoin="round"
                             className={isPenPanelVisible ? styles.rotate : ''}
                         >
-                            <path d="m9 18 6-6-6-6"/>
+                            <path d="m9 18 6-6-6-6" />
                         </svg>
                     </button>
                 </div>
 
                 {/* Page Settings Panel */}
-                <div className={`${styles.notebook_interior_page_setting_panel} ${
-                    isPagePanelVisible ? styles.visible : styles.hidden
-                }`}>
+                <div className={`${styles.notebook_interior_page_setting_panel} ${isPagePanelVisible ? styles.visible : styles.hidden
+                    }`}>
                     <PageSettingPanel
                         onPatternChange={(pattern) => handlePageSettingChange('pattern', pattern)}
                         onPatternSizeChange={(size) => handlePageSettingChange('patternSize', size)}
@@ -288,7 +286,7 @@ const NoteBookInteriorPage = () => {
                         setPatternColor={(color) => handlePageSettingChange('patternColor', color)}
                         setPatternOpacity={(opacity) => handlePageSettingChange('patternOpacity', opacity)}
                     />
-                    
+
                     <button
                         className={styles.panel_toggle}
                         onClick={() => setIsPagePanelVisible(!isPagePanelVisible)}
@@ -305,7 +303,7 @@ const NoteBookInteriorPage = () => {
                             strokeLinejoin="round"
                             className={isPagePanelVisible ? '' : styles.rotate}
                         >
-                            <path d="m15 18-6-6 6-6"/>
+                            <path d="m15 18-6-6 6-6" />
                         </svg>
                     </button>
                 </div>
