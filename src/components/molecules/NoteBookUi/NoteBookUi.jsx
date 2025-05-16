@@ -1,4 +1,4 @@
-// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Simplified loading
+// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Simple Excalidraw-style saving
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import styles from './NoteBookUi.module.scss'
 import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
@@ -18,6 +18,7 @@ const NoteBookUi = forwardRef(({
   const canvasRef = useRef(null);
   const [numberOfHoles, setNumberOfHoles] = useState(25);
   const [canvasSize, setCanvasSize] = useState({ width: 870, height: 870 });
+  const lastSavedVersionRef = useRef(null);
 
   useEffect(() => {
     const updateSizeAndHoles = () => {
@@ -32,34 +33,42 @@ const NoteBookUi = forwardRef(({
       }
     };
 
-    // Set initial values
     updateSizeAndHoles();
-
-    // Add event listener for window resize
     window.addEventListener('resize', updateSizeAndHoles);
-
-    // Cleanup event listener on component unmount
-    return () => {
-      window.removeEventListener('resize', updateSizeAndHoles);
-    };
+    return () => window.removeEventListener('resize', updateSizeAndHoles);
   }, []);
 
-  // Simple loading: whenever initialCanvasData changes, load it
+  // Simple loading - load the data when it changes
   useEffect(() => {
-    if (canvasRef.current && initialCanvasData) {
-      console.log('NoteBookUi: Loading initial data');
-      canvasRef.current.loadDrawingData(initialCanvasData);
-    } else if (canvasRef.current && !initialCanvasData) {
-      console.log('NoteBookUi: No initial data, clearing canvas');
-      canvasRef.current.clearCanvas();
+ ;
+    
+    if (canvasRef.current && initialCanvasData !== null) {
+    
+      
+      // Check if there's actual content to load
+      if (initialCanvasData && initialCanvasData !== '""' && initialCanvasData !== '{}') {
+        try {
+          // Parse the data to check if it has elements
+          const parsed = typeof initialCanvasData === 'string' 
+            ? JSON.parse(initialCanvasData) 
+            : initialCanvasData;
+          
+ 
+          
+          if (parsed && parsed.elements && parsed.elements.length > 0) {
+     
+            canvasRef.current.loadDrawingData(initialCanvasData);
+          } 
+        } catch (error) {
+          console.error('Error parsing canvas data:', error);
+        }
+      } 
     }
   }, [initialCanvasData]);
 
   // Generate background pattern styles
   const generateBackgroundPattern = () => {
     const size = patternSize;
-    
-    // Create color with opacity for the pattern
     const getPatternColorWithOpacity = (color, opacity) => {
       const hex = color.replace('#', '');
       const r = parseInt(hex.substr(0, 2), 16);
@@ -79,19 +88,16 @@ const NoteBookUi = forwardRef(({
           `,
           backgroundSize: `${size}px ${size}px`
         };
-      
       case 'dots':
         return {
           backgroundImage: `radial-gradient(circle, ${patternColorWithOpacity} ${Math.max(1, size / 15)}px, transparent ${Math.max(2, size / 10)}px)`,
           backgroundSize: `${size}px ${size}px`
         };
-      
       case 'lines':
         return {
           backgroundImage: `linear-gradient(to bottom, ${patternColorWithOpacity} 1px, transparent 1px)`,
           backgroundSize: `100% ${size}px`
         };
-      
       case 'graph':
         return {
           backgroundImage: `
@@ -102,24 +108,29 @@ const NoteBookUi = forwardRef(({
           `,
           backgroundSize: `${size}px ${size}px, ${size}px ${size}px, ${size * 5}px ${size * 5}px, ${size * 5}px ${size * 5}px`
         };
-      
       case 'blank':
       default:
-        return {
-          background: 'white'
-        };
+        return { background: 'white' };
     }
   };
 
+  // Simple canvas change handler - Excalidraw style
   const handleCanvasChange = (vectorData) => {
-    if (onCanvasChange) {
+    if (!onCanvasChange) return;
+    
+    // Simple version check - only save if data actually changed
+    const currentVersion = vectorData ? JSON.stringify(vectorData) : null;
+    
+    if (currentVersion !== lastSavedVersionRef.current) {
+      lastSavedVersionRef.current = currentVersion;
+      console.log('Canvas changed, saving...');
       onCanvasChange(vectorData);
     }
   };
 
   const backgroundStyle = generateBackgroundPattern();
 
-  // Expose methods via ref - now using vector data methods
+  // Expose methods via ref
   useImperativeHandle(ref, () => ({
     clearCanvas: () => {
       if (canvasRef.current) {
@@ -150,20 +161,17 @@ const NoteBookUi = forwardRef(({
       }
       return '';
     },
-    // Simple loading function - just pass data through
     loadCanvasData: (vectorData) => {
       if (canvasRef.current && vectorData) {
-        console.log('NoteBookUi: Loading data via ref');
         canvasRef.current.loadDrawingData(vectorData);
       }
     },
     loadDrawingData: (vectorData) => {
       if (canvasRef.current && vectorData) {
-        console.log('NoteBookUi: Loading data via loadDrawingData');
         canvasRef.current.loadDrawingData(vectorData);
       }
     },
-    canvasRef: canvasRef.current // Expose canvas ref for direct access
+    canvasRef: canvasRef.current
   }));
 
   return (

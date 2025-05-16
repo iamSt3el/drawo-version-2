@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/core/CanvasRenderer.js - Fixed version
+// src/components/SmoothCanvas/core/CanvasRenderer.js - Fixed path rendering
 import React from 'react';
 
 export class CanvasRenderer {
@@ -11,19 +11,27 @@ export class CanvasRenderer {
     const paths = this.engine.getPaths();
     const pathsToErase = this.engine.getPathsToErase();
 
-    return paths.map((pathObj) => (
-      <path
-        key={pathObj.id} // Use the unique ID from the path object
-        d={pathObj.pathData}
-        fill={pathObj.color}
-        stroke="none"
-        fillRule="nonzero"
-        style={{
-          opacity: pathsToErase.has(pathObj.id) ? 0.3 : 1,
-          transition: 'opacity 0.1s ease'
-        }}
-      />
-    ));
+    const renderedPaths = paths.map((pathObj, index) => {
+  
+      
+      return (
+        <path
+          key={pathObj.id}
+          d={pathObj.pathData}
+          fill={pathObj.color}
+          stroke="none"
+          fillRule="nonzero"
+          style={{
+            opacity: pathsToErase.has(pathObj.id) ? 0.3 : 1,
+            transition: 'opacity 0.1s ease'
+          }}
+        />
+      );
+    });
+
+
+    
+    return renderedPaths;
   }
 
   renderEraserCursor(showEraser, eraserPosition, eraserWidth) {
@@ -42,8 +50,8 @@ export class CanvasRenderer {
           pointerEvents: 'none',
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
           zIndex: 100,
-          transform: 'translateZ(0)', // Force hardware acceleration
-          animation: 'none' // Disable animation for better performance
+          transform: 'translateZ(0)',
+          animation: 'none'
         }}
       />
     );

@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/core/CanvasEngine.js - Fixed ID generation and loading issues
+// src/components/SmoothCanvas/core/CanvasEngine.js - Simple Excalidraw-style engine
 export class CanvasEngine {
   constructor(canvasRef, svgRef, options = {}) {
     this.canvasRef = canvasRef;
@@ -26,10 +26,8 @@ export class CanvasEngine {
     this.nextPathId = 0;
     this.pathsToErase = new Set();
     this.pathBBoxes = new Map();
-    this.isLoading = false; // Add loading flag to prevent infinite loops
     
     this.dpr = window.devicePixelRatio || 1;
-    
     this.initializeCanvas();
   }
 
@@ -44,8 +42,6 @@ export class CanvasEngine {
     
     const ctx = canvas.getContext('2d');
     ctx.scale(this.dpr, this.dpr);
-    
-    // Keep canvas transparent for patterns
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
@@ -55,14 +51,8 @@ export class CanvasEngine {
       smoothing: 0.5,
       streamline: 0.5,
       last: true,
-      start: { 
-        taper: 0,
-        cap: true 
-      },
-      end: { 
-        taper: strokeWidth * 0,
-        cap: true 
-      }
+      start: { taper: 0, cap: true },
+      end: { taper: strokeWidth * 0, cap: true }
     };
 
     if (inputType === 'pen') {
@@ -129,9 +119,7 @@ export class CanvasEngine {
 
   calculateBoundingBox(pathData) {
     const coords = pathData.match(/(-?\d+(?:\.\d+)?)/g);
-    if (!coords || coords.length < 4) {
-      return null;
-    }
+    if (!coords || coords.length < 4) return null;
 
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     
@@ -147,12 +135,7 @@ export class CanvasEngine {
       }
     }
 
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY
-    };
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
   }
 
   eraserIntersectsBoundingBox(eraserX, eraserY, eraserRadius, bbox) {
@@ -170,24 +153,19 @@ export class CanvasEngine {
   }
 
   normalizeColor(color) {
-    if (color.startsWith('rgba')) {
-      return color;
-    }
-    if (color.startsWith('rgb')) {
+    if (color.startsWith('rgba') || color.startsWith('rgb')) {
       return color;
     }
     return color;
   }
 
-  // Fixed ID generation to use timestamp + counter for uniqueness
   generatePathId() {
     return `path-${Date.now()}-${this.nextPathId++}`;
   }
 
-  // Store stroke as VECTOR data with input points
   addPath(pathData, color, strokeWidth, inputType, inputPoints = []) {
     const newPath = {
-      id: this.generatePathId(), // Use unique ID generation
+      id: this.generatePathId(),
       pathData,
       color: this.normalizeColor(color),
       type: 'stroke',
@@ -224,7 +202,7 @@ export class CanvasEngine {
     return true;
   }
 
-  // Export as JSON containing VECTOR data, not images
+  // Export as JSON - simple format
   exportAsJSON() {
     return JSON.stringify({
       type: 'drawing',
@@ -246,77 +224,49 @@ export class CanvasEngine {
     });
   }
 
-  // Fixed import function to prevent infinite loops
+  // Simple import function
   importFromJSON(jsonData) {
-    if (this.isLoading) {
-      console.log('Already loading, skipping...');
-      return false;
+    
+    if (!jsonData) {
+      return true;
     }
 
-    this.isLoading = true;
-    
     try {
-      console.log('Importing vector data:', jsonData);
-      
       let data;
       
-      // Handle empty or invalid data
-      if (!jsonData) {
-        console.log('No drawing data to import');
-        this.clearPaths();
-        this.isLoading = false;
-        return true;
-      }
-      
-      // Parse JSON if it's a string
+      // Parse JSON if string
       if (typeof jsonData === 'string') {
-        // Check if it's JSON or base64 image data
-        if (jsonData.startsWith('data:image/')) {
-          console.log('Legacy image data detected, ignoring');
-          this.clearPaths();
-          this.isLoading = false;
+        
+        // Skip empty strings and non-JSON
+        if (!jsonData.trim() || !jsonData.trim().startsWith('{')) {
           return true;
         }
         
-        if (!jsonData.trim().startsWith('{')) {
-          console.log('Not JSON data, ignoring');
-          this.clearPaths();
-          this.isLoading = false;
-          return true;
+        try {
+          data = JSON.parse(jsonData);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          return false;
         }
-        
-        data = JSON.parse(jsonData);
-      } else if (typeof jsonData === 'object') {
-        data = jsonData;
       } else {
-        console.log('Invalid data format');
-        this.clearPaths();
-        this.isLoading = false;
-        return false;
+        data = jsonData;
       }
 
-      // Validate data structure
+
+      // Validate structure
       if (!data || !data.elements) {
-        console.log('Invalid drawing data structure');
-        this.clearPaths();
-        this.isLoading = false;
         return true;
       }
 
-      // If data is the same as current (no elements), don't reload
-      if (data.elements.length === 0 && this.paths.length === 0) {
-        console.log('No new data to load, skipping');
-        this.isLoading = false;
-        return true;
-      }
 
-      // Clear existing paths before importing
+      // Clear existing paths
       this.clearPaths();
 
-      // Import each path/element
+      // Import elements
       data.elements.forEach((element, index) => {
+        
         if (element.type === 'stroke' && element.pathData) {
-          // Reconstruct the path with a new unique ID to avoid conflicts
+       
           const newPath = {
             id: this.generatePathId(),
             pathData: element.pathData,
@@ -328,7 +278,7 @@ export class CanvasEngine {
             timestamp: element.timestamp || Date.now()
           };
 
-          // Calculate bounding box
+
           const bbox = this.calculateBoundingBox(element.pathData);
           if (bbox) {
             this.pathBBoxes.set(newPath.id, bbox);
@@ -338,6 +288,7 @@ export class CanvasEngine {
         }
       });
 
+
       // Update options if provided
       if (data.appState) {
         this.updateOptions({
@@ -346,31 +297,23 @@ export class CanvasEngine {
         });
       }
 
-      console.log(`Successfully imported ${this.paths.length} paths`);
-      this.isLoading = false;
       return true;
     } catch (error) {
-      console.error('Error importing drawing data:', error);
-      this.clearPaths();
-      this.isLoading = false;
+      console.error('Error importing data:', error);
       return false;
     }
   }
 
-  // Export as SVG for external use
+  // Export as SVG
   exportAsSVG() {
     const svg = this.svgRef.current;
     if (!svg) return '';
 
-    // Clone SVG and ensure proper styling
     const svgClone = svg.cloneNode(true);
-    
-    // Set proper viewBox and dimensions
     svgClone.setAttribute('viewBox', `0 0 ${this.options.width} ${this.options.height}`);
     svgClone.setAttribute('width', this.options.width);
     svgClone.setAttribute('height', this.options.height);
     
-    // Ensure paths have proper fills
     const paths = svgClone.querySelectorAll('path');
     paths.forEach((path, index) => {
       if (this.paths[index] && this.paths[index].color) {
@@ -382,10 +325,9 @@ export class CanvasEngine {
     return new XMLSerializer().serializeToString(svgClone);
   }
 
-  // Export as data URL (for backward compatibility if needed)
+  // Export as data URL
   exportAsDataUrl(format = 'png', transparent = true) {
     return new Promise(resolve => {
-      // Create canvas to render SVG paths
       const exportCanvas = document.createElement('canvas');
       const exportCtx = exportCanvas.getContext('2d');
 
@@ -393,13 +335,11 @@ export class CanvasEngine {
       exportCanvas.height = this.options.height * this.dpr;
       exportCtx.scale(this.dpr, this.dpr);
 
-      // Optionally add white background
       if (!transparent && format !== 'png') {
         exportCtx.fillStyle = '#ffffff';
         exportCtx.fillRect(0, 0, this.options.width, this.options.height);
       }
 
-      // Render SVG to canvas
       const svgData = this.exportAsSVG();
       const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
       const url = URL.createObjectURL(svgBlob);
@@ -424,30 +364,16 @@ export class CanvasEngine {
   }
 
   // Getters
-  getPaths() {
-    return this.paths;
-  }
-
-  getPathsToErase() {
-    return this.pathsToErase;
-  }
-
-  getCurrentPath() {
-    return this.currentPath;
-  }
+  getPaths() { return this.paths; }
+  getPathsToErase() { return this.pathsToErase; }
+  getCurrentPath() { return this.currentPath; }
 
   // Setters
-  setPathsToErase(pathsToErase) {
-    this.pathsToErase = pathsToErase;
-  }
-
-  setCurrentPath(path) {
-    this.currentPath = path;
-  }
+  setPathsToErase(pathsToErase) { this.pathsToErase = pathsToErase; }
+  setCurrentPath(path) { this.currentPath = path; }
 
   updateOptions(newOptions) {
     this.options = { ...this.options, ...newOptions };
-    
     if (newOptions.width || newOptions.height) {
       this.initializeCanvas();
     }

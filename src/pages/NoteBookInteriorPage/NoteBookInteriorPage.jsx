@@ -1,4 +1,4 @@
-// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Simplified to just load whatever is in the file
+// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Simple Excalidraw-style saving
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
 import { useParams } from 'react-router-dom'
@@ -18,6 +18,7 @@ const NoteBookInteriorPage = () => {
     // Use custom hook for notebook data management
     const {
         notebook,
+        pages,  // Add this line - it was missing
         currentPageNumber,
         currentPageData,
         loading,
@@ -41,41 +42,22 @@ const NoteBookInteriorPage = () => {
     const [isPenPanelVisible, setIsPenPanelVisible] = useState(true);
     const [isPagePanelVisible, setIsPagePanelVisible] = useState(true);
 
-    // Auto-save hook for canvas changes - now handling vector data
+    // Simple auto-save - like Excalidraw (debounced)
     const { debouncedSave, saveNow } = useCanvasAutoSave(async (vectorData) => {
         setIsSaving(true);
         try {
-            console.log('Saving vector data');
-            // Save the vector data (JSON) instead of image data
             await saveCurrentPage(vectorData);
-            console.log('Vector data saved successfully');
         } catch (error) {
             console.error('Error saving page:', error);
         } finally {
             setIsSaving(false);
         }
-    }, 2000);
+    }, 1500); // Save after 1.5 seconds of inactivity
 
     // Final stroke color that combines color and opacity
     const finalStrokeColor = opacity < 100
         ? `rgba(${parseInt(strokeColor.slice(1, 3), 16)}, ${parseInt(strokeColor.slice(3, 5), 16)}, ${parseInt(strokeColor.slice(5, 7), 16)}, ${opacity / 100})`
         : strokeColor;
-
-    // SIMPLE LOADING: When page data changes, just load whatever is there
-    useEffect(() => {
-        if (currentPageData && notebookUiRef.current) {
-            console.log('Loading data for page:', currentPageNumber);
-            console.log('Page data:', currentPageData.canvasData);
-            
-            if (currentPageData.canvasData) {
-                // Just load whatever data is there
-                notebookUiRef.current.loadDrawingData(currentPageData.canvasData);
-            } else {
-                // No data, clear canvas
-                notebookUiRef.current.clearCanvas();
-            }
-        }
-    }, [currentPageData?.id, currentPageNumber]);
 
     // Update page settings when they change
     useEffect(() => {
@@ -101,38 +83,22 @@ const NoteBookInteriorPage = () => {
         setOpacity(newOpacity);
     };
 
-    // Handle canvas change - now receives vector data instead of image data
-    const handleCanvasChange = useCallback(async (vectorData) => {
-        console.log('Canvas (vector data) changed, scheduling save...');
-        // Auto-save vector data changes
+    // Simple canvas change handler - trigger debounced save on every change
+    const handleCanvasChange = useCallback((vectorData) => {
         debouncedSave(vectorData);
     }, [debouncedSave]);
 
     const handleClearCanvas = async () => {
         if (notebookUiRef.current) {
             notebookUiRef.current.clearCanvas();
-            // Save immediately after clearing
-            setTimeout(async () => {
-                if (notebookUiRef.current) {
-                    const vectorData = notebookUiRef.current.exportJSON();
-                    await saveNow(vectorData);
-                }
-            }, 100);
+            // Clear will trigger onCanvasChange automatically
         }
     };
 
     const handleUndo = async () => {
         if (notebookUiRef.current) {
-            const success = notebookUiRef.current.undo();
-            if (success) {
-                // Save after undo
-                setTimeout(async () => {
-                    if (notebookUiRef.current) {
-                        const vectorData = notebookUiRef.current.exportJSON();
-                        debouncedSave(vectorData);
-                    }
-                }, 100);
-            }
+            notebookUiRef.current.undo();
+            // Undo will trigger onCanvasChange automatically
         }
     };
 
@@ -141,44 +107,26 @@ const NoteBookInteriorPage = () => {
         updatePageSettings(newSettings);
     }, [pageSettings, updatePageSettings]);
 
-    // Navigation handlers
+    // Simple navigation handlers
     const handlePreviousPage = async () => {
         if (currentPageNumber > 1) {
-            console.log('Navigating to previous page...');
             // Save current page before navigating
             if (notebookUiRef.current) {
-                setIsSaving(true);
-                try {
-                    const vectorData = notebookUiRef.current.exportJSON();
-                    await saveNow(vectorData);
-                    // Navigate to previous page
-                    await navigateToPage(currentPageNumber - 1);
-                } catch (error) {
-                    console.error('Error saving before navigation:', error);
-                } finally {
-                    setIsSaving(false);
-                }
+                const vectorData = notebookUiRef.current.exportJSON();
+                await saveNow(vectorData);
             }
+            await navigateToPage(currentPageNumber - 1);
         }
     };
 
     const handleNextPage = async () => {
         if (notebook && currentPageNumber < notebook.pages) {
-            console.log('Navigating to next page...');
             // Save current page before navigating
             if (notebookUiRef.current) {
-                setIsSaving(true);
-                try {
-                    const vectorData = notebookUiRef.current.exportJSON();
-                    await saveNow(vectorData);
-                    // Navigate to next page
-                    await navigateToPage(currentPageNumber + 1);
-                } catch (error) {
-                    console.error('Error saving before navigation:', error);
-                } finally {
-                    setIsSaving(false);
-                }
+                const vectorData = notebookUiRef.current.exportJSON();
+                await saveNow(vectorData);
             }
+            await navigateToPage(currentPageNumber + 1);
         }
     };
 
@@ -189,7 +137,6 @@ const NoteBookInteriorPage = () => {
             try {
                 const vectorData = notebookUiRef.current.exportJSON();
                 await saveNow(vectorData);
-                console.log('Manual save completed');
             } catch (error) {
                 console.error('Error during manual save:', error);
             } finally {
@@ -198,7 +145,7 @@ const NoteBookInteriorPage = () => {
         }
     };
 
-    // Export functions for testing/debugging
+    // Export functions
     const handleExportSVG = async () => {
         if (notebookUiRef.current) {
             const svgData = notebookUiRef.current.exportSVG();
@@ -222,7 +169,7 @@ const NoteBookInteriorPage = () => {
         }
     };
 
-    // Keyboard shortcuts for page navigation
+    // Keyboard shortcuts
     useEffect(() => {
         const handleKeyPress = (e) => {
             if (e.ctrlKey || e.metaKey) {
@@ -298,13 +245,14 @@ const NoteBookInteriorPage = () => {
 
                 {/* Save Status */}
                 <div className={`${styles.save_status} ${isSaving ? styles.saving : ''}`}>
-                    {isSaving ? 'Saving...' : 'Vector auto-save enabled'}
+                    {isSaving ? 'Saving...' : 'Auto-save enabled'}
                 </div>
 
-                {/* Export buttons for testing */}
+                {/* Export buttons */}
                 <div className={styles.export_buttons}>
                     <button onClick={handleExportSVG} title="Export as SVG (Ctrl+E)">SVG</button>
                     <button onClick={handleExportImage} title="Export as PNG (Ctrl+I)">PNG</button>
+                    <button onClick={handleManualSave} title="Manual Save (Ctrl+S)">Save</button>
                 </div>
             </div>
 

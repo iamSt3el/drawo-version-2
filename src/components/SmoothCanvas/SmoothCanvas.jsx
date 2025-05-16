@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/SmoothCanvas.jsx - Fixed to prevent infinite loading
+// src/components/SmoothCanvas/SmoothCanvas.jsx - Simple Excalidraw-style implementation
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { CanvasEngine } from './core/CanvasEngine';
 import { EventHandler } from './core/EventHandler';
@@ -25,10 +25,9 @@ const SmoothCanvas = forwardRef(({
   const [pathsToErase, setPathsToErase] = useState(new Set());
   const [eraserPosition, setEraserPosition] = useState({ x: 0, y: 0 });
   const [showEraser, setShowEraser] = useState(false);
-  const [canvasInitialized, setCanvasInitialized] = useState(false);
-  const [isLoadingData, setIsLoadingData] = useState(false); // Add loading state
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize engine and handlers
+  // Initialize canvas engine
   useEffect(() => {
     if (!canvasRef.current || !svgRef.current) return;
 
@@ -49,20 +48,18 @@ const SmoothCanvas = forwardRef(({
 
     const renderer = new CanvasRenderer(engine);
 
-    // Set up callbacks
+    // Simple callbacks - trigger save on any change
     eventHandler.setCallbacks({
       onStrokeComplete: () => {
         setPaths([...engine.getPaths()]);
-        if (onCanvasChange && !isLoadingData) { // Don't trigger save during loading
-          const vectorData = engine.exportAsJSON();
-          onCanvasChange(vectorData);
+        if (onCanvasChange && isInitialized) {
+          onCanvasChange(engine.exportAsJSON());
         }
       },
       onPathsErased: () => {
         setPaths([...engine.getPaths()]);
-        if (onCanvasChange && !isLoadingData) { // Don't trigger save during loading
-          const vectorData = engine.exportAsJSON();
-          onCanvasChange(vectorData);
+        if (onCanvasChange && isInitialized) {
+          onCanvasChange(engine.exportAsJSON());
         }
       },
       onPathsMarkedForErase: (pathsToErase) => {
@@ -76,13 +73,12 @@ const SmoothCanvas = forwardRef(({
       }
     });
 
-    // Attach event listeners
     eventHandler.attachListeners(canvasRef.current);
 
     engineRef.current = engine;
     eventHandlerRef.current = eventHandler;
     rendererRef.current = renderer;
-    setCanvasInitialized(true);
+    setIsInitialized(true);
 
     return () => {
       if (eventHandlerRef.current && canvasRef.current) {
@@ -96,7 +92,7 @@ const SmoothCanvas = forwardRef(({
 
   // Update options when props change
   useEffect(() => {
-    if (engineRef.current && eventHandlerRef.current && canvasInitialized) {
+    if (engineRef.current && eventHandlerRef.current && isInitialized) {
       engineRef.current.updateOptions({
         width,
         height,
@@ -113,7 +109,6 @@ const SmoothCanvas = forwardRef(({
         eraserWidth
       };
 
-      // Set erasing mode
       engineRef.current.isErasing = currentTool === 'eraser';
       
       if (currentTool !== 'eraser') {
@@ -121,45 +116,50 @@ const SmoothCanvas = forwardRef(({
         setShowEraser(false);
       }
     }
-  }, [currentTool, strokeColor, strokeWidth, eraserWidth, canvasInitialized]);
+  }, [currentTool, strokeColor, strokeWidth, eraserWidth, isInitialized]);
 
-  // Load drawing data from JSON (vector data) - Fixed to prevent infinite loops
+  // Simple load function
   const loadDrawingData = (vectorData) => {
-    if (!vectorData || !engineRef.current || isLoadingData) {
-      console.log('Cannot load drawing data: missing data, engine, or already loading');
-      return;
+
+    
+    if (!engineRef.current || !vectorData) {
+    
+      return false;
     }
     
-    setIsLoadingData(true); // Prevent save callbacks during loading
+
     
     try {
-      console.log('Loading vector drawing data...');
+      // Temporarily disable callbacks to prevent save during load
+      setIsInitialized(false);
+      
+      
       const success = engineRef.current.importFromJSON(vectorData);
+    
       
       if (success) {
-        // Update state to trigger re-render
-        setPaths([...engineRef.current.getPaths()]);
-        console.log('Vector drawing data loaded successfully');
-      } else {
-        console.error('Failed to load vector drawing data');
+        const currentPaths = engineRef.current.getPaths();
+  
+        
+        setPaths([...currentPaths]);
+      
       }
-    } catch (error) {
-      console.error('Error loading vector drawing data:', error);
-    } finally {
-      // Add longer delay to prevent immediate re-saving
+      // Re-enable callbacks after a short delay
       setTimeout(() => {
-        setIsLoadingData(false);
-      }, 500); // Increased delay
+        setIsInitialized(true);
+    
+      }, 100);
+      
+      return success;
+    } catch (error) {
+      console.error('Error loading drawing data:', error);
+      setIsInitialized(true);
+      return false;
     }
   };
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
-    eraseMode: (mode) => {
-      if (engineRef.current) {
-        engineRef.current.isErasing = mode;
-      }
-    },
     exportImage: async (format = 'png') => {
       if (engineRef.current) {
         return engineRef.current.exportAsDataUrl(format, true);
@@ -189,10 +189,10 @@ const SmoothCanvas = forwardRef(({
         const tempPath = svg?.querySelector('#temp-path');
         if (tempPath) tempPath.remove();
 
-        if (onCanvasChange && !isLoadingData) {
+        // Trigger save after clear
+        if (onCanvasChange && isInitialized) {
           setTimeout(() => {
-            const vectorData = engineRef.current.exportAsJSON();
-            onCanvasChange(vectorData);
+            onCanvasChange(engineRef.current.exportAsJSON());
           }, 10);
         }
       }
@@ -202,10 +202,10 @@ const SmoothCanvas = forwardRef(({
         const success = engineRef.current.undo();
         if (success) {
           setPaths([...engineRef.current.getPaths()]);
-          if (onCanvasChange && !isLoadingData) {
+          // Trigger save after undo
+          if (onCanvasChange && isInitialized) {
             setTimeout(() => {
-              const vectorData = engineRef.current.exportAsJSON();
-              onCanvasChange(vectorData);
+              onCanvasChange(engineRef.current.exportAsJSON());
             }, 10);
           }
         }
@@ -213,7 +213,6 @@ const SmoothCanvas = forwardRef(({
       }
       return false;
     },
-    // Updated to load vector data instead of image data
     loadCanvasData: loadDrawingData,
     loadDrawingData: loadDrawingData
   }));
@@ -242,12 +241,12 @@ const SmoothCanvas = forwardRef(({
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: 2, // Above SVG to capture events
-          pointerEvents: 'auto' // Canvas handles drawing events
+          zIndex: 2,
+          pointerEvents: 'auto'
         }}
       />
 
-      {/* SVG for vector drawing - renders the paths */}
+      {/* SVG for vector drawing */}
       <svg
         ref={svgRef}
         width={width}
@@ -255,15 +254,15 @@ const SmoothCanvas = forwardRef(({
         viewBox={`0 0 ${width} ${height}`}
         className={styles.svg}
         style={{
-          pointerEvents: 'none', // SVG doesn't handle events, just renders
+          pointerEvents: 'none',
           shapeRendering: 'geometricPrecision',
           position: 'absolute',
           top: 0,
           left: 0,
-          zIndex: 1 // Below canvas
+          zIndex: 1
         }}
       >
-        {/* Render paths as SVG elements */}
+        {/* Debug: Show how many paths we have */}
         {rendererRef.current?.renderPaths()}
       </svg>
 

@@ -1,4 +1,4 @@
-// hooks/useNotebookData.js - Fixed version with better data management
+// hooks/useNotebookData.js - Fixed to ensure proper data loading
 import { useState, useEffect, useCallback } from 'react';
 import { useNotebooks } from '../context/NotebookContextWithFS';
 
@@ -28,6 +28,7 @@ export const useNotebookData = (notebookId) => {
   }, [notebookId]);
 
   const loadNotebookData = async () => {
+    
     setLoading(true);
     setError(null);
     
@@ -43,6 +44,8 @@ export const useNotebookData = (notebookId) => {
       // Load current page if it exists
       if (pagesData.length > 0) {
         const currentPage = pagesData.find(p => p.pageNumber === currentPageNumber) || pagesData[0];
+     
+        
         setCurrentPageData(currentPage);
         if (currentPage.settings) {
           updatePageSettings(currentPage.settings);
@@ -58,8 +61,8 @@ export const useNotebookData = (notebookId) => {
         };
         setCurrentPageData(emptyPageData);
       }
+      
     } catch (err) {
-      console.error('Error loading notebook data:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -74,7 +77,8 @@ export const useNotebookData = (notebookId) => {
       console.log('Saving page data:', { 
         pageNumber: currentPageNumber, 
         hasData: !!canvasData,
-        dataType: typeof canvasData 
+        dataType: typeof canvasData,
+        dataLength: canvasData ? canvasData.length : 0
       });
 
       const pageData = {
@@ -85,7 +89,6 @@ export const useNotebookData = (notebookId) => {
       };
 
       const savedPage = await savePage(pageData);
-      console.log('Page saved successfully:', savedPage);
       setCurrentPageData(savedPage);
 
       // Update pages array
@@ -100,13 +103,26 @@ export const useNotebookData = (notebookId) => {
         }
       });
 
-      // Update notebook progress
-      const progress = (currentPageNumber / notebook.pages) * 100;
-      const updatedNotebook = await updateNotebook(notebook.id, {
-        currentPage: currentPageNumber,
-        progress: Math.round(progress)
-      });
-      setNotebook(updatedNotebook);
+      // FIXED: Ensure page is linked to notebook
+      // Check if notebook has this page in its pages array
+      const pageId = savedPage.id;
+      if (notebook.pages && !notebook.pages.includes(pageId)) {
+        // Update notebook with the page reference
+        const updatedNotebook = await updateNotebook(notebook.id, {
+          pages: [...(notebook.pages || []), pageId],
+          currentPage: currentPageNumber,
+          progress: Math.round((currentPageNumber / notebook.pages) * 100)
+        });
+        setNotebook(updatedNotebook);
+      } else {
+        // Just update progress
+        const progress = (currentPageNumber / notebook.pages) * 100;
+        const updatedNotebook = await updateNotebook(notebook.id, {
+          currentPage: currentPageNumber,
+          progress: Math.round(progress)
+        });
+        setNotebook(updatedNotebook);
+      }
 
       return savedPage;
     } catch (err) {
@@ -119,21 +135,18 @@ export const useNotebookData = (notebookId) => {
   const navigateToPage = useCallback(async (pageNumber) => {
     if (!notebook || pageNumber < 1 || pageNumber > notebook.pages) return;
 
-    console.log(`Navigating to page ${pageNumber}`);
     setCurrentPageNumber(pageNumber);
 
     // Try to load existing page data
     const pageId = `${notebook.id}_page_${pageNumber}`;
     try {
       const pageData = await loadPage(pageId);
-      console.log('Loaded existing page data:', pageData);
       setCurrentPageData(pageData);
       if (pageData.settings) {
         updatePageSettings(pageData.settings);
       }
     } catch (error) {
       // Page doesn't exist yet, create empty page data
-      console.log('Creating new empty page data for page', pageNumber);
       const emptyPageData = {
         id: pageId,
         notebookId: notebook.id,
