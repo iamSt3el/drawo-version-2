@@ -1,4 +1,4 @@
-// contexts/NotebookContextWithFS.jsx - Fixed version with proper filter logic
+// context/NotebookContextWithFS.jsx - Remove global pageSettings
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 // For Electron integration
@@ -22,12 +22,7 @@ export const NotebookProvider = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentNotebook, setCurrentNotebook] = useState(null);
   const [currentPage, setCurrentPage] = useState(null);
-  const [pageSettings, setPageSettings] = useState({
-    pattern: 'grid',
-    patternSize: 20,
-    patternColor: '#e5e7eb',
-    patternOpacity: 50
-  });
+  // Remove global pageSettings - each page will manage its own settings
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -132,75 +127,77 @@ export const NotebookProvider = ({ children }) => {
   };
 
   // Add a new notebook
-const addNotebook = async (notebookData) => {
-  try {
-    const colorGradients = {
-      '#8b5cf6': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
-      '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-      '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
-      '#10b981': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-      '#3b82f6': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-      '#ec4899': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
-      '#14b8a6': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
-      '#f97316': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)'
-    };
-
-    const notebookId = Date.now();
-    const newNotebook = {
-      id: notebookId,
-      ...notebookData,
-      gradient: colorGradients[notebookData.color] || colorGradients['#8b5cf6'],
-      currentPage: 1, // Changed from 0 to 1
-      progress: 0,
-      pages: [], // This will store the page IDs, not the count
-      createdAt: new Date().toISOString()
-    };
-
-    // Save the notebook first
-    const savedNotebook = await saveNotebook(newNotebook);
-    
-    // Create the first page immediately
-    const firstPageData = {
-      notebookId: notebookId,
-      pageNumber: 1,
-      canvasData: JSON.stringify({
-        type: 'drawing',
-        version: 1,
-        elements: [],
-        appState: {
-          width: 870,
-          height: 870
-        }
-      }),
-      settings: pageSettings
-    };
-
+  const addNotebook = async (notebookData) => {
     try {
-      // Save the first page
-      const savedPage = await savePage(firstPageData);
-      
-      // Update the notebook with the page reference
-      const updatedNotebook = {
-        ...savedNotebook,
-        pages: [savedPage.id],
-        currentPage: 1,
-        totalPages: notebookData.pages // Store the original pages count as totalPages
+      const colorGradients = {
+        '#8b5cf6': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
+        '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+        '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
+        '#10b981': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+        '#3b82f6': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+        '#ec4899': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
+        '#14b8a6': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
+        '#f97316': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)'
       };
+
+      const notebookId = Date.now();
+      const newNotebook = {
+        id: notebookId,
+        ...notebookData,
+        gradient: colorGradients[notebookData.color] || colorGradients['#8b5cf6'],
+        currentPage: 1,
+        progress: 0,
+        pages: [],
+        createdAt: new Date().toISOString()
+      };
+
+      // Save the notebook first
+      const savedNotebook = await saveNotebook(newNotebook);
       
-      await saveNotebook(updatedNotebook);
-      await loadNotebooks(); // Reload to get updated list
-      return updatedNotebook;
-    } catch (pageError) {
-      console.error('Error creating first page:', pageError);
-      // Still return the notebook even if page creation fails
-      await loadNotebooks();
-      return savedNotebook;
+      // Create the first page immediately with default settings
+      const firstPageData = {
+        notebookId: notebookId,
+        pageNumber: 1,
+        canvasData: JSON.stringify({
+          type: 'drawing',
+          version: 1,
+          elements: [],
+          appState: {
+            width: 870,
+            height: 870
+          }
+        }),
+        settings: {
+          pattern: 'grid',
+          patternSize: 20,
+          patternColor: '#e5e7eb',
+          patternOpacity: 50
+        }
+      };
+
+      try {
+        const savedPage = await savePage(firstPageData);
+        
+        const updatedNotebook = {
+          ...savedNotebook,
+          pages: [savedPage.id],
+          currentPage: 1,
+          totalPages: notebookData.pages
+        };
+        
+        await saveNotebook(updatedNotebook);
+        await loadNotebooks();
+        return updatedNotebook;
+      } catch (pageError) {
+        console.error('Error creating first page:', pageError);
+        await loadNotebooks();
+        return savedNotebook;
+      }
+    } catch (error) {
+      console.error('Error adding notebook:', error);
+      throw error;
     }
-  } catch (error) {
-    console.error('Error adding notebook:', error);
-    throw error;
-  }
-};
+  };
 
   // Update a notebook
   const updateNotebook = async (id, updates) => {
@@ -240,37 +237,37 @@ const addNotebook = async (notebookData) => {
     }
   };
 
-  // Save a page
+  // Save a page - simplified to just save the data as provided
   const savePage = async (pageData) => {
     try {
       if (isElectron) {
-        const result = await ipcRenderer.invoke('data-save-page', {
-          ...pageData,
-          settings: pageSettings
-        });
+        const result = await ipcRenderer.invoke('data-save-page', pageData);
         if (!result.success) {
           throw new Error(result.error);
         }
         setCurrentPage(result.page);
         return result.page;
       } else {
-        // For web version, store in localStorage with notebook
+        // For web version
         const notebookId = pageData.notebookId;
         const pageId = `${notebookId}_page_${pageData.pageNumber}`;
+        
         const page = {
           id: pageId,
-          ...pageData,
-          settings: pageSettings,
+          notebookId,
+          pageNumber: pageData.pageNumber,
+          canvasData: pageData.canvasData,
+          settings: pageData.settings,
           lastModified: new Date().toISOString()
         };
         
-        // Store page data in localStorage
+        // Store in localStorage
         const pagesKey = `notebook_${notebookId}_pages`;
         const existingPages = JSON.parse(localStorage.getItem(pagesKey) || '[]');
-        const pageIndex = existingPages.findIndex(p => p.id === pageId);
+        const existingPageIndex = existingPages.findIndex(p => p.id === pageId);
         
-        if (pageIndex >= 0) {
-          existingPages[pageIndex] = page;
+        if (existingPageIndex >= 0) {
+          existingPages[existingPageIndex] = page;
         } else {
           existingPages.push(page);
         }
@@ -292,16 +289,6 @@ const addNotebook = async (notebookData) => {
         const result = await ipcRenderer.invoke('data-load-page', pageId);
         if (result.success) {
           setCurrentPage(result.page);
-          if (result.page.settings) {
-            // Use callback to prevent infinite loops
-            setPageSettings(prev => {
-              // Only update if settings are actually different
-              if (JSON.stringify(prev) !== JSON.stringify(result.page.settings)) {
-                return result.page.settings;
-              }
-              return prev;
-            });
-          }
           return result.page;
         } else {
           throw new Error(result.error);
@@ -315,16 +302,6 @@ const addNotebook = async (notebookData) => {
         
         if (page) {
           setCurrentPage(page);
-          if (page.settings) {
-            // Use callback to prevent infinite loops
-            setPageSettings(prev => {
-              // Only update if settings are actually different
-              if (JSON.stringify(prev) !== JSON.stringify(page.settings)) {
-                return page.settings;
-              }
-              return prev;
-            });
-          }
           return page;
         } else {
           throw new Error('Page not found');
@@ -362,14 +339,9 @@ const addNotebook = async (notebookData) => {
     try {
       if (isElectron) {
         const result = await ipcRenderer.invoke('data-load-app-settings');
-        if (result.success && result.settings.defaultPageSettings) {
-          setPageSettings(result.settings.defaultPageSettings);
-        }
+        // We don't need to store default page settings globally anymore
       } else {
-        const settings = JSON.parse(localStorage.getItem('appSettings') || '{}');
-        if (settings.defaultPageSettings) {
-          setPageSettings(settings.defaultPageSettings);
-        }
+        // We don't need to store default page settings globally anymore
       }
     } catch (error) {
       console.error('Error loading app settings:', error);
@@ -403,17 +375,6 @@ const addNotebook = async (notebookData) => {
     setSearchQuery(query);
   };
 
-  // Update page settings - use callback to prevent infinite loops
-  const updatePageSettings = (newSettings) => {
-    setPageSettings(prev => {
-      // Only update if settings are actually different
-      if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
-        return { ...prev, ...newSettings };
-      }
-      return prev;
-    });
-  };
-
   // Create backup
   const createBackup = async () => {
     if (isElectron) {
@@ -445,8 +406,6 @@ const addNotebook = async (notebookData) => {
     }
   };
 
-  
-
   const value = {
     // Data
     notebooks,
@@ -454,7 +413,6 @@ const addNotebook = async (notebookData) => {
     searchQuery,
     currentNotebook,
     currentPage,
-    pageSettings,
     isLoading,
     error,
     
@@ -471,8 +429,7 @@ const addNotebook = async (notebookData) => {
     loadPage,
     loadPagesByNotebook,
     
-    // Settings functions
-    updatePageSettings,
+    // Settings functions - removed pageSettings and updatePageSettings
     loadAppSettings,
     saveAppSettings,
     

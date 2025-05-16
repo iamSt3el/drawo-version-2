@@ -1,17 +1,15 @@
-// hooks/useNotebookData.js - Fixed to properly clear canvas when navigating to new pages
+// hooks/useNotebookData.js - Remove global pageSettings dependencies
 import { useState, useEffect, useCallback } from 'react';
 import { useNotebooks } from '../context/NotebookContextWithFS';
 
-export const useNotebookData = (notebookId) => {
+export const useNotebookData = (notebookId, canvasRef = null) => {
   const {
     loadNotebook,
     updateNotebook,
     savePage,
     loadPage,
-    loadPagesByNotebook,
-    pageSettings,
-    updatePageSettings
-  } = useNotebooks();
+    loadPagesByNotebook
+  } = useNotebooks(); // Remove pageSettings and updatePageSettings
 
   const [notebook, setNotebook] = useState(null);
   const [pages, setPages] = useState([]);
@@ -19,6 +17,14 @@ export const useNotebookData = (notebookId) => {
   const [currentPageData, setCurrentPageData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Helper function to get current canvas data
+  const getCurrentCanvasData = useCallback(() => {
+    if (canvasRef?.current && canvasRef.current.exportJSON) {
+      return canvasRef.current.exportJSON();
+    }
+    return null;
+  }, [canvasRef]);
 
   // Load notebook and its pages
   useEffect(() => {
@@ -56,7 +62,12 @@ export const useNotebookData = (notebookId) => {
               height: 870
             }
           }),
-          settings: pageSettings
+          settings: {
+            pattern: 'grid',
+            patternSize: 20,
+            patternColor: '#e5e7eb',
+            patternOpacity: 50
+          }
         };
 
         try {
@@ -88,7 +99,12 @@ export const useNotebookData = (notebookId) => {
                 height: 870
               }
             }),
-            settings: pageSettings
+            settings: {
+              pattern: 'grid',
+              patternSize: 20,
+              patternColor: '#e5e7eb',
+              patternOpacity: 50
+            }
           };
           setCurrentPageData(emptyPageData);
         }
@@ -99,9 +115,6 @@ export const useNotebookData = (notebookId) => {
         if (currentPage.pageNumber) {
           setCurrentPageNumber(currentPage.pageNumber);
         }
-        if (currentPage.settings) {
-          updatePageSettings(currentPage.settings);
-        }
       }
       
     } catch (err) {
@@ -111,7 +124,7 @@ export const useNotebookData = (notebookId) => {
     }
   };
 
-  // Save current page with canvas data
+  // Save current page with canvas data (simplified - no longer needs settings from context)
   const saveCurrentPage = useCallback(async (canvasData) => {
     if (!notebook) return;
 
@@ -120,14 +133,20 @@ export const useNotebookData = (notebookId) => {
         pageNumber: currentPageNumber, 
         hasData: !!canvasData,
         dataType: typeof canvasData,
-        dataLength: canvasData ? canvasData.length : 0
+        dataLength: canvasData ? JSON.stringify(canvasData).length : 0
       });
 
+      // If no canvas data provided, try to get it from the canvas ref
+      let finalCanvasData = canvasData;
+      if (!finalCanvasData && getCurrentCanvasData) {
+        finalCanvasData = getCurrentCanvasData();
+      }
+
+      // Don't pass settings here - they'll be passed from the component
       const pageData = {
         notebookId: notebook.id,
         pageNumber: currentPageNumber,
-        canvasData,
-        settings: pageSettings
+        canvasData: typeof finalCanvasData === 'string' ? finalCanvasData : JSON.stringify(finalCanvasData)
       };
 
       const savedPage = await savePage(pageData);
@@ -168,7 +187,7 @@ export const useNotebookData = (notebookId) => {
       console.error('Error saving page:', err);
       throw err;
     }
-  }, [notebook, currentPageNumber, pageSettings, savePage, updateNotebook]);
+  }, [notebook, currentPageNumber, savePage, updateNotebook, getCurrentCanvasData]);
 
   // Get total pages allowed for this notebook
   const getTotalPages = useCallback(() => {
@@ -176,12 +195,37 @@ export const useNotebookData = (notebookId) => {
     return notebook?.totalPages || notebook?.pages || 100;
   }, [notebook]);
 
-  // Navigate to a specific page - with automatic page creation and proper canvas handling
-  const navigateToPage = useCallback(async (pageNumber) => {
+  // Navigate to a specific page - simplified without settings
+  const navigateToPage = useCallback(async (pageNumber, saveCurrentFirst = true) => {
     const totalPages = getTotalPages();
     if (!notebook || pageNumber < 1 || pageNumber > totalPages) return;
 
     console.log(`Navigating to page ${pageNumber}`);
+    
+    // Save current page if requested and different from target page
+    if (saveCurrentFirst && currentPageNumber !== pageNumber && currentPageData) {
+      console.log(`Saving current page ${currentPageNumber} before navigation`);
+      try {
+        // Get the latest canvas data before saving
+        const vectorData = getCurrentCanvasData ? getCurrentCanvasData() : 
+                          (currentPageData?.canvasData || JSON.stringify({
+                            type: 'drawing',
+                            version: 1,
+                            elements: [],
+                            appState: {
+                              width: 870,
+                              height: 870
+                            }
+                          }));
+        
+        await saveCurrentPage(vectorData);
+        console.log(`Successfully saved page ${currentPageNumber} before navigation`);
+      } catch (error) {
+        console.error(`Error saving page ${currentPageNumber} before navigation:`, error);
+        // Continue with navigation even if save fails
+      }
+    }
+    
     setCurrentPageNumber(pageNumber);
 
     // Try to load existing page data
@@ -191,9 +235,6 @@ export const useNotebookData = (notebookId) => {
       const pageData = await loadPage(pageId);
       console.log(`Successfully loaded page ${pageNumber} with data:`, pageData.canvasData?.length || 0, 'characters');
       setCurrentPageData(pageData);
-      if (pageData.settings) {
-        updatePageSettings(pageData.settings);
-      }
     } catch (error) {
       // Page doesn't exist yet, create empty page data
       console.log(`Creating new page ${pageNumber}`);
@@ -210,7 +251,12 @@ export const useNotebookData = (notebookId) => {
             height: 870
           }
         }),
-        settings: pageSettings
+        settings: {
+          pattern: 'grid',
+          patternSize: 20,
+          patternColor: '#e5e7eb',
+          patternOpacity: 50
+        }
       };
       
       console.log(`Setting empty page data for page ${pageNumber}`);
@@ -246,20 +292,22 @@ export const useNotebookData = (notebookId) => {
         // Keep the temporary page data even if save fails
       }
     }
-  }, [notebook, loadPage, pageSettings, updatePageSettings, getTotalPages, savePage, updateNotebook]);
+  }, [notebook, loadPage, getTotalPages, 
+      savePage, updateNotebook, currentPageNumber, currentPageData, 
+      saveCurrentPage, getCurrentCanvasData]);
 
   // Navigate to next page
   const nextPage = useCallback(() => {
     const totalPages = getTotalPages();
     if (currentPageNumber < totalPages) {
-      navigateToPage(currentPageNumber + 1);
+      navigateToPage(currentPageNumber + 1, true); // true = save current page first
     }
   }, [currentPageNumber, getTotalPages, navigateToPage]);
 
   // Navigate to previous page
   const previousPage = useCallback(() => {
     if (currentPageNumber > 1) {
-      navigateToPage(currentPageNumber - 1);
+      navigateToPage(currentPageNumber - 1, true); // true = save current page first
     }
   }, [currentPageNumber, navigateToPage]);
 
@@ -291,6 +339,7 @@ export const useNotebookData = (notebookId) => {
     previousPage,
     addNewPage,
     reload: loadNotebookData,
-    totalPages: getTotalPages()
+    totalPages: getTotalPages(),
+    getCurrentCanvasData
   };
 };

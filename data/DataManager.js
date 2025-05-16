@@ -115,39 +115,45 @@ async saveNotebook(notebook) {
 
   // PAGE FUNCTIONS
   
-  // Save a page (includes canvas data and settings)
-  async savePage(pageData) {
-    try {
-      const { notebookId, pageNumber, canvasData, settings, ...otherData } = pageData;
-      const pageId = `${notebookId}_page_${pageNumber}`;
-      
-      const page = {
-        id: pageId,
-        notebookId,
-        pageNumber,
-        canvasData, // This will be the base64 image data from canvas
-        settings: settings || {
-          pattern: 'grid',
-          patternSize: 20,
-          patternColor: '#e5e7eb',
-          patternOpacity: 50
-        },
-        lastModified: new Date().toISOString(),
-        ...otherData
-      };
+ // In data/DataManager.js, update the savePage function:
 
-      const filePath = path.join(this.pagesDir, `${pageId}.json`);
-      await fs.writeFile(filePath, JSON.stringify(page, null, 2));
-      
-      // Update notebook's pages array
-      await this.addPageToNotebook(notebookId, pageId);
-      
-      return { success: true, page };
-    } catch (error) {
-      console.error('Error saving page:', error);
-      return { success: false, error: error.message };
-    }
+// data/DataManager.js - Simple fix to ensure settings are saved
+
+// Update the savePage function to be simpler:
+async savePage(pageData) {
+  try {
+    const { notebookId, pageNumber, canvasData, settings, ...otherData } = pageData;
+    const pageId = `${notebookId}_page_${pageNumber}`;
+    
+    // Simple approach - use the provided settings directly
+    console.log(settings)
+    const page = {
+      id: pageId,
+      notebookId,
+      pageNumber,
+      canvasData,
+      settings: settings || {
+        pattern: 'grid',
+        patternSize: 20,
+        patternColor: '#e5e7eb',
+        patternOpacity: 50
+      },
+      lastModified: new Date().toISOString(),
+      ...otherData
+    };
+
+    const filePath = path.join(this.pagesDir, `${pageId}.json`);
+    await fs.writeFile(filePath, JSON.stringify(page, null, 2));
+    
+    // Update notebook's pages array
+    await this.addPageToNotebook(notebookId, pageId);
+    
+    return { success: true, page };
+  } catch (error) {
+    console.error('Error saving page:', error);
+    return { success: false, error: error.message };
   }
+}
 
   // Load a page by ID
   async loadPage(pageId) {

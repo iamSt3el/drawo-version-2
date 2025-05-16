@@ -1,4 +1,4 @@
-// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed navigation and page creation
+// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed to ensure data is saved
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
 import { useParams } from 'react-router-dom'
@@ -12,10 +12,11 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const NoteBookInteriorPage = () => {
     const { id } = useParams();
-    const { pageSettings, updatePageSettings } = useNotebooks();
+    const { savePage: savePageToContext } = useNotebooks();
     const notebookUiRef = useRef(null);
+    const lastLoadedPageNumber = useRef(null);
 
-    // Use custom hook for notebook data management
+    // Use custom hook for notebook data management - pass canvas ref
     const {
         notebook,
         pages,
@@ -27,8 +28,17 @@ const NoteBookInteriorPage = () => {
         navigateToPage,
         nextPage,
         previousPage,
-        totalPages // This now correctly returns the total pages limit
-    } = useNotebookData(id);
+        totalPages,
+        getCurrentCanvasData
+    } = useNotebookData(id, notebookUiRef);
+
+    // Local state for current page settings - each page manages its own settings
+    const [currentPageSettings, setCurrentPageSettings] = useState({
+        pattern: 'grid',
+        patternSize: 20,
+        patternColor: '#e5e7eb',
+        patternOpacity: 50
+    });
 
     // Canvas state
     const [currentTool, setCurrentTool] = useState('pen');
@@ -43,36 +53,43 @@ const NoteBookInteriorPage = () => {
     const [isPenPanelVisible, setIsPenPanelVisible] = useState(true);
     const [isPagePanelVisible, setIsPagePanelVisible] = useState(true);
 
-    // Simple auto-save - like Excalidraw (debounced)
+    // Simple auto-save - save canvas changes but preserve existing settings
     const { debouncedSave, saveNow } = useCanvasAutoSave(async (vectorData) => {
         setIsSaving(true);
         try {
             console.log('Auto-save triggered for page:', currentPageNumber);
-            await saveCurrentPage(vectorData);
+            // Pass current settings to preserve them during auto-save
+            await saveCurrentPage(vectorData, currentPageSettings);
         } catch (error) {
             console.error('Error saving page:', error);
         } finally {
             setIsSaving(false);
         }
-    }, 1500); // Save after 1.5 seconds of inactivity
+    }, 1500);
 
     // Final stroke color that combines color and opacity
     const finalStrokeColor = opacity < 100
         ? `rgba(${parseInt(strokeColor.slice(1, 3), 16)}, ${parseInt(strokeColor.slice(3, 5), 16)}, ${parseInt(strokeColor.slice(5, 7), 16)}, ${opacity / 100})`
         : strokeColor;
 
-    // Update page settings when they change
+    // Load page settings ONLY when page number changes
     useEffect(() => {
-        if (currentPageData && currentPageData.settings) {
-            updatePageSettings(currentPageData.settings);
+        if (currentPageData && 
+            currentPageData.settings && 
+            lastLoadedPageNumber.current !== currentPageNumber) {
+            
+            console.log('Loading page settings for page', currentPageNumber, ':', currentPageData.settings);
+            setCurrentPageSettings(currentPageData.settings);
+            lastLoadedPageNumber.current = currentPageNumber;
         }
-    }, [currentPageData?.settings, updatePageSettings]);
+    }, [currentPageNumber]);
 
-    // Force canvas reload when currentPageData changes (page navigation)
+    // Load canvas data when page changes (but don't refresh on settings change)
     useEffect(() => {
         if (notebookUiRef.current && currentPageData) {
             console.log(`Loading page ${currentPageNumber} data:`, currentPageData.canvasData?.length || 0, 'characters');
-            // Only load if there's actual canvas data and it's a different page
+            
+            // Only load canvas data, don't refresh for settings
             if (currentPageData.canvasData) {
                 notebookUiRef.current.loadCanvasData(currentPageData.canvasData);
             } else {
@@ -80,7 +97,7 @@ const NoteBookInteriorPage = () => {
                 notebookUiRef.current.clearCanvas();
             }
         }
-    }, [currentPageData, currentPageNumber]);
+    }, [currentPageNumber, currentPageData?.canvasData]);
 
     const handleToolChange = (tool) => {
         setCurrentTool(tool);
@@ -99,7 +116,7 @@ const NoteBookInteriorPage = () => {
         setOpacity(newOpacity);
     };
 
-    // Simple canvas change handler - trigger debounced save on every change
+    // Canvas change handler - trigger debounced save with current settings
     const handleCanvasChange = useCallback((vectorData) => {
         console.log('Canvas change detected for page:', currentPageNumber);
         debouncedSave(vectorData);
@@ -119,41 +136,57 @@ const NoteBookInteriorPage = () => {
         }
     };
 
+    // Page settings handler - updates local state only, saves when navigating
     const handlePageSettingChange = useCallback((settingName, value) => {
-        const newSettings = { ...pageSettings, [settingName]: value };
-        updatePageSettings(newSettings);
-    }, [pageSettings, updatePageSettings]);
+        console.log(`Changing ${settingName} to ${value}`);
+        const newSettings = { ...currentPageSettings, [settingName]: value };
+        
+        // Update local page settings immediately
+        setCurrentPageSettings(newSettings);
+    }, [currentPageSettings]);
 
-    // Fixed navigation handlers
+    // Enhanced save before navigation to include settings
+    const saveBeforeNavigation = useCallback(async () => {
+        if (notebookUiRef.current) {
+            try {
+                const vectorData = notebookUiRef.current.exportJSON();
+                
+                // Use the direct save to context function with all data
+                const pageDataToSave = {
+                    notebookId: notebook.id,
+                    pageNumber: currentPageNumber,
+                    canvasData: vectorData,
+                    settings: currentPageSettings
+                };
+                
+                console.log('Saving before navigation:', pageDataToSave);
+                await savePageToContext(pageDataToSave);
+                console.log('Page and settings saved before navigation');
+            } catch (error) {
+                console.error('Error saving before navigation:', error);
+            }
+        }
+    }, [notebook, currentPageNumber, currentPageSettings, savePageToContext]);
+
+    // Update navigation handlers to use the new save function
     const handlePreviousPage = async () => {
         if (currentPageNumber > 1) {
-            // Save current page before navigating
-            if (notebookUiRef.current) {
-                const vectorData = notebookUiRef.current.exportJSON();
-                await saveNow(vectorData);
-            }
+            await saveBeforeNavigation();
             await previousPage();
         }
     };
 
     const handleNextPage = async () => {
-        // Save current page before navigating
-        if (notebookUiRef.current) {
-            const vectorData = notebookUiRef.current.exportJSON();
-            await saveNow(vectorData);
-        }
-        
-        // Use the nextPage function which handles the logic correctly
+        await saveBeforeNavigation();
         await nextPage();
     };
 
-    // Manual save function
+    // Update manual save to include settings
     const handleManualSave = async () => {
         if (notebookUiRef.current) {
             setIsSaving(true);
             try {
-                const vectorData = notebookUiRef.current.exportJSON();
-                await saveNow(vectorData);
+                await saveBeforeNavigation(); // This includes both canvas and settings
             } catch (error) {
                 console.error('Error during manual save:', error);
             } finally {
@@ -255,7 +288,7 @@ const NoteBookInteriorPage = () => {
                     setIsPen={setIsPen}
                 />
 
-                {/* Page Info in Toolbar - Fixed to show correct total pages */}
+                {/* Page Info in Toolbar */}
                 <div className={styles.page_info}>
                     <span>Page {currentPageNumber} of {totalPages}</span>
                 </div>
@@ -281,10 +314,10 @@ const NoteBookInteriorPage = () => {
                         onPatternSizeChange={(size) => handlePageSettingChange('patternSize', size)}
                         onPatternColorChange={(color) => handlePageSettingChange('patternColor', color)}
                         onPatternOpacityChange={(opacity) => handlePageSettingChange('patternOpacity', opacity)}
-                        pattern={pageSettings.pattern}
-                        patternSize={pageSettings.patternSize}
-                        patternColor={pageSettings.patternColor}
-                        patternOpacity={pageSettings.patternOpacity}
+                        pattern={currentPageSettings.pattern}
+                        patternSize={currentPageSettings.patternSize}
+                        patternColor={currentPageSettings.patternColor}
+                        patternOpacity={currentPageSettings.patternOpacity}
                         setPattern={(pattern) => handlePageSettingChange('pattern', pattern)}
                         setPatternSize={(size) => handlePageSettingChange('patternSize', size)}
                         setPatternColor={(color) => handlePageSettingChange('patternColor', color)}
@@ -321,17 +354,17 @@ const NoteBookInteriorPage = () => {
                         strokeColor={finalStrokeColor}
                         strokeWidth={strokeWidth}
                         eraserWidth={eraserWidth}
-                        pattern={pageSettings.pattern}
-                        patternSize={pageSettings.patternSize}
-                        patternColor={pageSettings.patternColor}
-                        patternOpacity={pageSettings.patternOpacity}
+                        pattern={currentPageSettings.pattern}
+                        patternSize={currentPageSettings.patternSize}
+                        patternColor={currentPageSettings.patternColor}
+                        patternOpacity={currentPageSettings.patternOpacity}
                         onCanvasChange={handleCanvasChange}
-                        key={`page-${currentPageNumber}`} // Force re-render when page changes
+                        key={currentPageNumber}
                         initialCanvasData={currentPageData?.canvasData}
                     />
                 </div>
 
-                {/* Right page navigation - Fixed condition */}
+                {/* Right page navigation */}
                 <div className={`${styles.page_navigation} ${styles.right}`}>
                     <button
                         onClick={handleNextPage}
