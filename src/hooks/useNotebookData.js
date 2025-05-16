@@ -56,7 +56,7 @@ export const useNotebookData = (notebookId) => {
               height: 870
             }
           }),
-          settings: pageSettings // Use current page settings for new empty pages
+          settings: pageSettings
         };
 
         try {
@@ -111,13 +111,7 @@ export const useNotebookData = (notebookId) => {
     }
   };
 
-  // Get total pages allowed for this notebook
-  const getTotalPages = useCallback(() => {
-    // Use totalPages if available (new format), otherwise fall back to pages for old format
-    return notebook?.totalPages || notebook?.pages || 100;
-  }, [notebook]);
-
-  // Save current page with canvas data and page settings
+  // Save current page with canvas data
   const saveCurrentPage = useCallback(async (canvasData) => {
     if (!notebook) return;
 
@@ -126,15 +120,14 @@ export const useNotebookData = (notebookId) => {
         pageNumber: currentPageNumber, 
         hasData: !!canvasData,
         dataType: typeof canvasData,
-        dataLength: canvasData ? canvasData.length : 0,
-        settings: pageSettings
+        dataLength: canvasData ? canvasData.length : 0
       });
 
       const pageData = {
         notebookId: notebook.id,
         pageNumber: currentPageNumber,
         canvasData,
-        settings: pageSettings // Explicitly include current page settings
+        settings: pageSettings
       };
 
       const savedPage = await savePage(pageData);
@@ -152,24 +145,20 @@ export const useNotebookData = (notebookId) => {
         }
       });
 
-      // Calculate and update progress
-      const totalPages = getTotalPages();
-      const progress = Math.round((currentPageNumber / totalPages) * 100);
-      
       // Update notebook with page reference if needed
       const pageId = savedPage.id;
       if (notebook.pages && !notebook.pages.includes(pageId)) {
         const updatedNotebook = await updateNotebook(notebook.id, {
           pages: [...(notebook.pages || []), pageId],
           currentPage: currentPageNumber,
-          progress: progress
+          progress: Math.round((currentPageNumber / getTotalPages()) * 100)
         });
         setNotebook(updatedNotebook);
       } else {
         // Just update progress and current page
         const updatedNotebook = await updateNotebook(notebook.id, {
           currentPage: currentPageNumber,
-          progress: progress
+          progress: Math.round((currentPageNumber / getTotalPages()) * 100)
         });
         setNotebook(updatedNotebook);
       }
@@ -179,7 +168,13 @@ export const useNotebookData = (notebookId) => {
       console.error('Error saving page:', err);
       throw err;
     }
-  }, [notebook, currentPageNumber, pageSettings, savePage, updateNotebook, getTotalPages]);
+  }, [notebook, currentPageNumber, pageSettings, savePage, updateNotebook]);
+
+  // Get total pages allowed for this notebook
+  const getTotalPages = useCallback(() => {
+    // Use totalPages if available (new format), otherwise fall back to pages for old format
+    return notebook?.totalPages || notebook?.pages || 100;
+  }, [notebook]);
 
   // Navigate to a specific page - with automatic page creation and proper canvas handling
   const navigateToPage = useCallback(async (pageNumber) => {
@@ -195,7 +190,6 @@ export const useNotebookData = (notebookId) => {
       console.log(`Attempting to load page: ${pageId}`);
       const pageData = await loadPage(pageId);
       console.log(`Successfully loaded page ${pageNumber} with data:`, pageData.canvasData?.length || 0, 'characters');
-      console.log('Page settings:', pageData.settings);
       setCurrentPageData(pageData);
       if (pageData.settings) {
         updatePageSettings(pageData.settings);

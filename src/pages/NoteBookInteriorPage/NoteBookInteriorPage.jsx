@@ -120,18 +120,9 @@ const NoteBookInteriorPage = () => {
     };
 
     const handlePageSettingChange = useCallback((settingName, value) => {
-        console.log('Page setting changed:', settingName, value);
         const newSettings = { ...pageSettings, [settingName]: value };
         updatePageSettings(newSettings);
-        
-        // Also save the settings to the current page immediately
-        if (currentPageData && notebookUiRef.current) {
-            const vectorData = notebookUiRef.current.exportJSON();
-            setTimeout(() => {
-                saveNow(vectorData);
-            }, 100);
-        }
-    }, [pageSettings, updatePageSettings, currentPageData, saveNow]);
+    }, [pageSettings, updatePageSettings]);
 
     // Fixed navigation handlers
     const handlePreviousPage = async () => {

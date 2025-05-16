@@ -1,4 +1,4 @@
-// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Fixed page settings application
+// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Fixed to prevent save loops during load
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import styles from './NoteBookUi.module.scss'
 import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
@@ -40,7 +40,7 @@ const NoteBookUi = forwardRef(({
     return () => window.removeEventListener('resize', updateSizeAndHoles);
   }, []);
 
-  // Fixed loading - prevent save during initial load and handle page changes
+  // Fixed loading - prevent save during initial load
   useEffect(() => {
     if (canvasRef.current && initialCanvasData !== null) {
       isLoadingRef.current = true;
@@ -54,38 +54,26 @@ const NoteBookUi = forwardRef(({
             : initialCanvasData;
           
           if (parsed && parsed.elements && parsed.elements.length > 0) {
-            console.log('Loading canvas data with', parsed.elements.length, 'elements');
+            console.log('Loading canvas data...');
             canvasRef.current.loadDrawingData(initialCanvasData);
             // Set the last saved version to prevent immediate save
             lastSavedVersionRef.current = initialCanvasData;
-          } else {
-            // Clear canvas for empty page data
-            console.log('Loading empty page - clearing canvas');
-            canvasRef.current.clearCanvas();
-            lastSavedVersionRef.current = initialCanvasData;
-          }
+          } 
         } catch (error) {
           console.error('Error parsing canvas data:', error);
-          // If parsing fails, clear the canvas
-          canvasRef.current.clearCanvas();
         }
-      } else {
-        // No canvas data or empty - clear the canvas
-        console.log('No canvas data - clearing canvas');
-        canvasRef.current.clearCanvas();
-        lastSavedVersionRef.current = null;
       }
       
       // Mark loading as complete after a short delay
       setTimeout(() => {
         isLoadingRef.current = false;
         initialLoadCompleteRef.current = true;
-        console.log('Canvas load complete');
+        console.log('Initial load complete');
       }, 100);
     }
   }, [initialCanvasData]);
 
-  // Generate background pattern styles - fixed to use current props
+  // Generate background pattern styles
   const generateBackgroundPattern = () => {
     const size = patternSize;
     const getPatternColorWithOpacity = (color, opacity) => {
@@ -97,8 +85,6 @@ const NoteBookUi = forwardRef(({
     };
 
     const patternColorWithOpacity = getPatternColorWithOpacity(patternColor, patternOpacity);
-    
-    console.log('Generating pattern:', { pattern, patternSize, patternColor, patternOpacity });
     
     switch (pattern) {
       case 'grid':
@@ -163,7 +149,6 @@ const NoteBookUi = forwardRef(({
     }
   };
 
-  // Generate background style every render to capture prop changes
   const backgroundStyle = generateBackgroundPattern();
 
   // Expose methods via ref
