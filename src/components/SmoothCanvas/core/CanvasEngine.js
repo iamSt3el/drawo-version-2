@@ -1,5 +1,4 @@
-// src/components/SmoothCanvas/core/CanvasEngine.js
-
+// src/components/SmoothCanvas/core/CanvasEngine.js - Fixed ID generation and loading issues
 export class CanvasEngine {
   constructor(canvasRef, svgRef, options = {}) {
     this.canvasRef = canvasRef;
@@ -27,6 +26,7 @@ export class CanvasEngine {
     this.nextPathId = 0;
     this.pathsToErase = new Set();
     this.pathBBoxes = new Map();
+    this.isLoading = false; // Add loading flag to prevent infinite loops
     
     this.dpr = window.devicePixelRatio || 1;
     
@@ -44,21 +44,23 @@ export class CanvasEngine {
     
     const ctx = canvas.getContext('2d');
     ctx.scale(this.dpr, this.dpr);
+    
+    // Keep canvas transparent for patterns
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
   getStrokeOptions(inputType, strokeWidth) {
-    // These are the key settings for smooth fast lines
     const baseOptions = {
       size: strokeWidth,
-      smoothing: 0.5,    // Medium smoothing - don't over-smooth
-      streamline: 0.5,   // Medium streamline - helps with fast movements
-      last: true,        // Process as final stroke
+      smoothing: 0.5,
+      streamline: 0.5,
+      last: true,
       start: { 
-        taper: 0,        // No taper at start
+        taper: 0,
         cap: true 
       },
       end: { 
-        taper: strokeWidth * 0,  // Small taper at end
+        taper: strokeWidth * 0,
         cap: true 
       }
     };
@@ -66,18 +68,18 @@ export class CanvasEngine {
     if (inputType === 'pen') {
       return {
         ...baseOptions,
-        thinning: 0.3,              // Moderate pen pressure response
-        simulatePressure: false,    // Use real pressure
-        smoothing: 0.3,             // Less smoothing for pen precision
-        streamline: 0.9,            // More streamline for pen smoothness
+        thinning: 0.3,
+        simulatePressure: false,
+        smoothing: 0.3,
+        streamline: 0.9,
       };
     } else {
       return {
         ...baseOptions,
-        thinning: 0.3,              // Less pressure variation for mouse
-        simulatePressure: true,     // Simulate pressure for mouse
-        smoothing: 0.5,             // Medium smoothing for mouse
-        streamline: 0.5,            // Medium streamline for mouse
+        thinning: 0.3,
+        simulatePressure: true,
+        smoothing: 0.5,
+        streamline: 0.5,
       };
     }
   }
@@ -111,10 +113,9 @@ export class CanvasEngine {
     
     if (type === 'pen') {
       pressure = e.pressure || 0.5;
-      // Handle case where tablet reports 0 pressure (like Xiaomi tablets)
       if (pressure === 0) {
-        pressure = 0.5; // Default pressure
-        this.inputType = 'mouse'; // Fall back to mouse simulation
+        pressure = 0.5;
+        this.inputType = 'mouse';
       }
       pressure = Math.max(0.1, Math.min(1.0, pressure));
     } else if (type === 'touch') {
@@ -124,29 +125,6 @@ export class CanvasEngine {
     }
 
     return [x, y, pressure];
-  }
-
-  createSmoothEnding(points) {
-    if (points.length < 2) return points;
-    
-    const smoothPoints = [...points];
-    
-    // Simple ending - just ensure the last point has the right pressure
-    if (smoothPoints.length > 0) {
-      const lastPoint = smoothPoints[smoothPoints.length - 1];
-      // Gradually reduce pressure for the last few points if there are enough
-      const taperPoints = Math.min(3, Math.floor(smoothPoints.length * 0.1));
-      
-      for (let i = taperPoints; i > 0; i--) {
-        const index = smoothPoints.length - i;
-        if (index >= 0 && index < smoothPoints.length) {
-          const t = i / taperPoints;
-          smoothPoints[index][2] = lastPoint[2] * (1 - t * 0.7);
-        }
-      }
-    }
-    
-    return smoothPoints;
   }
 
   calculateBoundingBox(pathData) {
@@ -191,37 +169,40 @@ export class CanvasEngine {
            eraserY <= expandedBbox.y + expandedBbox.height;
   }
 
-  // Helper method to normalize color (handles both hex and rgba colors)
   normalizeColor(color) {
-    // If color is already in rgba format, return as is
     if (color.startsWith('rgba')) {
       return color;
     }
-    // If it's rgb format, return as is
     if (color.startsWith('rgb')) {
       return color;
     }
-    // If it's hex, return as is
     return color;
   }
 
-  addPath(pathData, color, strokeWidth, inputType) {
+  // Fixed ID generation to use timestamp + counter for uniqueness
+  generatePathId() {
+    return `path-${Date.now()}-${this.nextPathId++}`;
+  }
+
+  // Store stroke as VECTOR data with input points
+  addPath(pathData, color, strokeWidth, inputType, inputPoints = []) {
     const newPath = {
-      id: this.nextPathId,
+      id: this.generatePathId(), // Use unique ID generation
       pathData,
-      color: this.normalizeColor(color), // This now properly handles rgba colors
+      color: this.normalizeColor(color),
       type: 'stroke',
       inputType,
-      strokeWidth
+      strokeWidth,
+      inputPoints,
+      timestamp: Date.now()
     };
     
     const bbox = this.calculateBoundingBox(pathData);
     if (bbox) {
-      this.pathBBoxes.set(this.nextPathId, bbox);
+      this.pathBBoxes.set(newPath.id, bbox);
     }
     
     this.paths.push(newPath);
-    this.nextPathId++;
     return newPath;
   }
 
@@ -243,46 +224,201 @@ export class CanvasEngine {
     return true;
   }
 
-  exportAsDataUrl(format = 'png') {
-    const svg = this.svgRef.current;
-    if (!svg) return Promise.resolve('');
+  // Export as JSON containing VECTOR data, not images
+  exportAsJSON() {
+    return JSON.stringify({
+      type: 'drawing',
+      version: 1,
+      elements: this.paths.map(path => ({
+        id: path.id,
+        type: path.type,
+        pathData: path.pathData,
+        color: path.color,
+        strokeWidth: path.strokeWidth,
+        inputType: path.inputType,
+        inputPoints: path.inputPoints,
+        timestamp: path.timestamp
+      })),
+      appState: {
+        width: this.options.width,
+        height: this.options.height
+      }
+    });
+  }
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+  // Fixed import function to prevent infinite loops
+  importFromJSON(jsonData) {
+    if (this.isLoading) {
+      console.log('Already loading, skipping...');
+      return false;
+    }
 
-    canvas.width = this.options.width * this.dpr;
-    canvas.height = this.options.height * this.dpr;
-    ctx.scale(this.dpr, this.dpr);
-
-    // White background
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, this.options.width, this.options.height);
-
-    // Clone the SVG and ensure all paths have proper colors
-    const svgClone = svg.cloneNode(true);
-    const paths = svgClone.querySelectorAll('path');
+    this.isLoading = true;
     
-    // Ensure all paths have their fill colors properly set
+    try {
+      console.log('Importing vector data:', jsonData);
+      
+      let data;
+      
+      // Handle empty or invalid data
+      if (!jsonData) {
+        console.log('No drawing data to import');
+        this.clearPaths();
+        this.isLoading = false;
+        return true;
+      }
+      
+      // Parse JSON if it's a string
+      if (typeof jsonData === 'string') {
+        // Check if it's JSON or base64 image data
+        if (jsonData.startsWith('data:image/')) {
+          console.log('Legacy image data detected, ignoring');
+          this.clearPaths();
+          this.isLoading = false;
+          return true;
+        }
+        
+        if (!jsonData.trim().startsWith('{')) {
+          console.log('Not JSON data, ignoring');
+          this.clearPaths();
+          this.isLoading = false;
+          return true;
+        }
+        
+        data = JSON.parse(jsonData);
+      } else if (typeof jsonData === 'object') {
+        data = jsonData;
+      } else {
+        console.log('Invalid data format');
+        this.clearPaths();
+        this.isLoading = false;
+        return false;
+      }
+
+      // Validate data structure
+      if (!data || !data.elements) {
+        console.log('Invalid drawing data structure');
+        this.clearPaths();
+        this.isLoading = false;
+        return true;
+      }
+
+      // If data is the same as current (no elements), don't reload
+      if (data.elements.length === 0 && this.paths.length === 0) {
+        console.log('No new data to load, skipping');
+        this.isLoading = false;
+        return true;
+      }
+
+      // Clear existing paths before importing
+      this.clearPaths();
+
+      // Import each path/element
+      data.elements.forEach((element, index) => {
+        if (element.type === 'stroke' && element.pathData) {
+          // Reconstruct the path with a new unique ID to avoid conflicts
+          const newPath = {
+            id: this.generatePathId(),
+            pathData: element.pathData,
+            color: element.color || '#000000',
+            type: element.type,
+            inputType: element.inputType || 'mouse',
+            strokeWidth: element.strokeWidth || 5,
+            inputPoints: element.inputPoints || [],
+            timestamp: element.timestamp || Date.now()
+          };
+
+          // Calculate bounding box
+          const bbox = this.calculateBoundingBox(element.pathData);
+          if (bbox) {
+            this.pathBBoxes.set(newPath.id, bbox);
+          }
+
+          this.paths.push(newPath);
+        }
+      });
+
+      // Update options if provided
+      if (data.appState) {
+        this.updateOptions({
+          width: data.appState.width || this.options.width,
+          height: data.appState.height || this.options.height
+        });
+      }
+
+      console.log(`Successfully imported ${this.paths.length} paths`);
+      this.isLoading = false;
+      return true;
+    } catch (error) {
+      console.error('Error importing drawing data:', error);
+      this.clearPaths();
+      this.isLoading = false;
+      return false;
+    }
+  }
+
+  // Export as SVG for external use
+  exportAsSVG() {
+    const svg = this.svgRef.current;
+    if (!svg) return '';
+
+    // Clone SVG and ensure proper styling
+    const svgClone = svg.cloneNode(true);
+    
+    // Set proper viewBox and dimensions
+    svgClone.setAttribute('viewBox', `0 0 ${this.options.width} ${this.options.height}`);
+    svgClone.setAttribute('width', this.options.width);
+    svgClone.setAttribute('height', this.options.height);
+    
+    // Ensure paths have proper fills
+    const paths = svgClone.querySelectorAll('path');
     paths.forEach((path, index) => {
       if (this.paths[index] && this.paths[index].color) {
         path.setAttribute('fill', this.paths[index].color);
+        path.setAttribute('stroke', 'none');
       }
     });
 
-    // Convert SVG to image
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
+    return new XMLSerializer().serializeToString(svgClone);
+  }
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-
+  // Export as data URL (for backward compatibility if needed)
+  exportAsDataUrl(format = 'png', transparent = true) {
     return new Promise(resolve => {
+      // Create canvas to render SVG paths
+      const exportCanvas = document.createElement('canvas');
+      const exportCtx = exportCanvas.getContext('2d');
+
+      exportCanvas.width = this.options.width * this.dpr;
+      exportCanvas.height = this.options.height * this.dpr;
+      exportCtx.scale(this.dpr, this.dpr);
+
+      // Optionally add white background
+      if (!transparent && format !== 'png') {
+        exportCtx.fillStyle = '#ffffff';
+        exportCtx.fillRect(0, 0, this.options.width, this.options.height);
+      }
+
+      // Render SVG to canvas
+      const svgData = this.exportAsSVG();
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
       img.onload = () => {
-        ctx.drawImage(img, 0, 0, this.options.width, this.options.height);
+        exportCtx.drawImage(img, 0, 0, this.options.width, this.options.height);
         URL.revokeObjectURL(url);
-        resolve(canvas.toDataURL(`image/${format}`, 0.98));
+        const quality = format === 'jpeg' ? 0.98 : undefined;
+        resolve(exportCanvas.toDataURL(`image/${format}`, quality));
       };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve('');
+      };
+
       img.src = url;
     });
   }
@@ -311,9 +447,12 @@ export class CanvasEngine {
 
   updateOptions(newOptions) {
     this.options = { ...this.options, ...newOptions };
+    
+    if (newOptions.width || newOptions.height) {
+      this.initializeCanvas();
+    }
   }
 
-  // Clean up
   destroy() {
     if (this.frameRequest) {
       cancelAnimationFrame(this.frameRequest);

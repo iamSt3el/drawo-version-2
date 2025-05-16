@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/core/CanvasRenderer.js
+// src/components/SmoothCanvas/core/CanvasRenderer.js - Fixed version
 import React from 'react';
 
 export class CanvasRenderer {
@@ -13,7 +13,7 @@ export class CanvasRenderer {
 
     return paths.map((pathObj) => (
       <path
-        key={pathObj.id}
+        key={pathObj.id} // Use the unique ID from the path object
         d={pathObj.pathData}
         fill={pathObj.color}
         stroke="none"
@@ -41,8 +41,9 @@ export class CanvasRenderer {
           borderRadius: '50%',
           pointerEvents: 'none',
           backgroundColor: 'rgba(239, 68, 68, 0.1)',
-          zIndex: 10,
-          animation: 'eraserPulse 1s infinite ease-in-out'
+          zIndex: 100,
+          transform: 'translateZ(0)', // Force hardware acceleration
+          animation: 'none' // Disable animation for better performance
         }}
       />
     );

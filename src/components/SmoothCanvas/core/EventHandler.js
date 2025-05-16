@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/core/EventHandler.js
+// src/components/SmoothCanvas/core/EventHandler.js - Fixed to save input points for vector data
 import { getStroke } from 'perfect-freehand';
 
 export class EventHandler {
@@ -65,22 +65,19 @@ export class EventHandler {
         const point = this.engine.getPointFromEvent(e);
         this.handleErase(point[0], point[1]);
       } else {
-        // THIS IS THE KEY FIX: Use getCoalescedEvents() to get all the coalesced points
-        // that were merged into this single pointermove event
+        // Get coalesced events for smoother drawing
         let points = [];
         
         if (e.getCoalescedEvents && typeof e.getCoalescedEvents === 'function') {
-          // Get all coalesced events (the events that were merged into this one)
           const coalescedEvents = e.getCoalescedEvents();
           for (const coalescedEvent of coalescedEvents) {
             points.push(this.engine.getPointFromEvent(coalescedEvent));
           }
         } else {
-          // Fallback for browsers that don't support getCoalescedEvents
           points.push(this.engine.getPointFromEvent(e));
         }
 
-        // Process all the points we collected
+        // Process all points
         for (const point of points) {
           this.updateDrawing(point);
         }
@@ -232,8 +229,14 @@ export class EventHandler {
           tempPath.remove();
         }
 
-        // Add to paths
-        this.engine.addPath(pathData, this.options.strokeColor, this.options.strokeWidth, this.engine.inputType);
+        // Add to paths with the original input points for proper vector storage
+        this.engine.addPath(
+          pathData, 
+          this.options.strokeColor, 
+          this.options.strokeWidth, 
+          this.engine.inputType,
+          currentPath // Save the original input points
+        );
         this.engine.setCurrentPath([]);
 
         if (this.callbacks.onStrokeComplete) {

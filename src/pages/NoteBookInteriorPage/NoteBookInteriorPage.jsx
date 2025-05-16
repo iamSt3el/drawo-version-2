@@ -1,5 +1,5 @@
-// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed version
-import React, { useState, useRef, useEffect } from 'react'
+// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Simplified to just load whatever is in the file
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
 import { useParams } from 'react-router-dom'
 import { NoteBookUi, ToolBar } from '../../components/molecules'
@@ -41,11 +41,14 @@ const NoteBookInteriorPage = () => {
     const [isPenPanelVisible, setIsPenPanelVisible] = useState(true);
     const [isPagePanelVisible, setIsPagePanelVisible] = useState(true);
 
-    // Auto-save hook for canvas changes
-    const { debouncedSave, saveNow } = useCanvasAutoSave(async (dataUrl) => {
+    // Auto-save hook for canvas changes - now handling vector data
+    const { debouncedSave, saveNow } = useCanvasAutoSave(async (vectorData) => {
         setIsSaving(true);
         try {
-            await saveCurrentPage(dataUrl);
+            console.log('Saving vector data');
+            // Save the vector data (JSON) instead of image data
+            await saveCurrentPage(vectorData);
+            console.log('Vector data saved successfully');
         } catch (error) {
             console.error('Error saving page:', error);
         } finally {
@@ -58,24 +61,28 @@ const NoteBookInteriorPage = () => {
         ? `rgba(${parseInt(strokeColor.slice(1, 3), 16)}, ${parseInt(strokeColor.slice(3, 5), 16)}, ${parseInt(strokeColor.slice(5, 7), 16)}, ${opacity / 100})`
         : strokeColor;
 
-    // Load canvas data when current page changes
+    // SIMPLE LOADING: When page data changes, just load whatever is there
     useEffect(() => {
-        if (currentPageData && currentPageData.canvasData && notebookUiRef.current) {
-            console.log('Loading canvas data for page:', currentPageNumber);
-            // Use the loadCanvasData method
-            notebookUiRef.current.loadCanvasData(currentPageData.canvasData);
-        } else if (notebookUiRef.current && currentPageData && !currentPageData.canvasData) {
-            // Clear canvas for empty page
-            notebookUiRef.current.clearCanvas();
+        if (currentPageData && notebookUiRef.current) {
+            console.log('Loading data for page:', currentPageNumber);
+            console.log('Page data:', currentPageData.canvasData);
+            
+            if (currentPageData.canvasData) {
+                // Just load whatever data is there
+                notebookUiRef.current.loadDrawingData(currentPageData.canvasData);
+            } else {
+                // No data, clear canvas
+                notebookUiRef.current.clearCanvas();
+            }
         }
-    }, [currentPageData, currentPageNumber]);
+    }, [currentPageData?.id, currentPageNumber]);
 
     // Update page settings when they change
     useEffect(() => {
         if (currentPageData && currentPageData.settings) {
             updatePageSettings(currentPageData.settings);
         }
-    }, [currentPageData, updatePageSettings]);
+    }, [currentPageData?.settings, updatePageSettings]);
 
     const handleToolChange = (tool) => {
         setCurrentTool(tool);
@@ -94,11 +101,12 @@ const NoteBookInteriorPage = () => {
         setOpacity(newOpacity);
     };
 
-    const handleCanvasChange = async (dataUrl) => {
-        console.log('Canvas changed, scheduling save...');
-        // Auto-save canvas changes with the data URL
-        debouncedSave(dataUrl);
-    };
+    // Handle canvas change - now receives vector data instead of image data
+    const handleCanvasChange = useCallback(async (vectorData) => {
+        console.log('Canvas (vector data) changed, scheduling save...');
+        // Auto-save vector data changes
+        debouncedSave(vectorData);
+    }, [debouncedSave]);
 
     const handleClearCanvas = async () => {
         if (notebookUiRef.current) {
@@ -106,8 +114,8 @@ const NoteBookInteriorPage = () => {
             // Save immediately after clearing
             setTimeout(async () => {
                 if (notebookUiRef.current) {
-                    const dataUrl = await notebookUiRef.current.exportImage();
-                    await saveNow(dataUrl);
+                    const vectorData = notebookUiRef.current.exportJSON();
+                    await saveNow(vectorData);
                 }
             }, 100);
         }
@@ -120,20 +128,20 @@ const NoteBookInteriorPage = () => {
                 // Save after undo
                 setTimeout(async () => {
                     if (notebookUiRef.current) {
-                        const dataUrl = await notebookUiRef.current.exportImage();
-                        debouncedSave(dataUrl);
+                        const vectorData = notebookUiRef.current.exportJSON();
+                        debouncedSave(vectorData);
                     }
                 }, 100);
             }
         }
     };
 
-    const handlePageSettingChange = (settingName, value) => {
+    const handlePageSettingChange = useCallback((settingName, value) => {
         const newSettings = { ...pageSettings, [settingName]: value };
         updatePageSettings(newSettings);
-    };
+    }, [pageSettings, updatePageSettings]);
 
-    // Fixed navigation handlers
+    // Navigation handlers
     const handlePreviousPage = async () => {
         if (currentPageNumber > 1) {
             console.log('Navigating to previous page...');
@@ -141,8 +149,8 @@ const NoteBookInteriorPage = () => {
             if (notebookUiRef.current) {
                 setIsSaving(true);
                 try {
-                    const dataUrl = await notebookUiRef.current.exportImage();
-                    await saveNow(dataUrl);
+                    const vectorData = notebookUiRef.current.exportJSON();
+                    await saveNow(vectorData);
                     // Navigate to previous page
                     await navigateToPage(currentPageNumber - 1);
                 } catch (error) {
@@ -161,8 +169,8 @@ const NoteBookInteriorPage = () => {
             if (notebookUiRef.current) {
                 setIsSaving(true);
                 try {
-                    const dataUrl = await notebookUiRef.current.exportImage();
-                    await saveNow(dataUrl);
+                    const vectorData = notebookUiRef.current.exportJSON();
+                    await saveNow(vectorData);
                     // Navigate to next page
                     await navigateToPage(currentPageNumber + 1);
                 } catch (error) {
@@ -179,14 +187,38 @@ const NoteBookInteriorPage = () => {
         if (notebookUiRef.current) {
             setIsSaving(true);
             try {
-                const dataUrl = await notebookUiRef.current.exportImage();
-                await saveNow(dataUrl);
+                const vectorData = notebookUiRef.current.exportJSON();
+                await saveNow(vectorData);
                 console.log('Manual save completed');
             } catch (error) {
                 console.error('Error during manual save:', error);
             } finally {
                 setIsSaving(false);
             }
+        }
+    };
+
+    // Export functions for testing/debugging
+    const handleExportSVG = async () => {
+        if (notebookUiRef.current) {
+            const svgData = notebookUiRef.current.exportSVG();
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `page-${currentPageNumber}.svg`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    };
+
+    const handleExportImage = async () => {
+        if (notebookUiRef.current) {
+            const imageData = await notebookUiRef.current.exportImage('png');
+            const a = document.createElement('a');
+            a.href = imageData;
+            a.download = `page-${currentPageNumber}.png`;
+            a.click();
         }
     };
 
@@ -206,6 +238,14 @@ const NoteBookInteriorPage = () => {
                     case 's':
                         e.preventDefault();
                         handleManualSave();
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        handleExportSVG();
+                        break;
+                    case 'i':
+                        e.preventDefault();
+                        handleExportImage();
                         break;
                     default:
                         break;
@@ -258,14 +298,19 @@ const NoteBookInteriorPage = () => {
 
                 {/* Save Status */}
                 <div className={`${styles.save_status} ${isSaving ? styles.saving : ''}`}>
-                    {isSaving ? 'Saving...' : 'Auto-save enabled'}
+                    {isSaving ? 'Saving...' : 'Vector auto-save enabled'}
+                </div>
+
+                {/* Export buttons for testing */}
+                <div className={styles.export_buttons}>
+                    <button onClick={handleExportSVG} title="Export as SVG (Ctrl+E)">SVG</button>
+                    <button onClick={handleExportImage} title="Export as PNG (Ctrl+I)">PNG</button>
                 </div>
             </div>
 
             <div className={styles.notebook_interior_ui}>
                 {/* Page Settings Panel (Left side) */}
-                <div className={`${styles.notebook_interior_page_setting_panel} ${isPagePanelVisible ? styles.visible : styles.hidden
-                    }`}>
+                <div className={`${styles.notebook_interior_page_setting_panel} ${isPagePanelVisible ? styles.visible : styles.hidden}`}>
                     <PageSettingPanel
                         onPatternChange={(pattern) => handlePageSettingChange('pattern', pattern)}
                         onPatternSizeChange={(size) => handlePageSettingChange('patternSize', size)}
@@ -286,17 +331,7 @@ const NoteBookInteriorPage = () => {
                         onClick={() => setIsPagePanelVisible(!isPagePanelVisible)}
                         title={isPagePanelVisible ? "Hide page settings" : "Show page settings"}
                     >
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={isPagePanelVisible ? '' : styles.rotate}
-                        >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPagePanelVisible ? '' : styles.rotate}>
                             <path d="m15 18-6-6 6-6" />
                         </svg>
                     </button>
@@ -343,8 +378,7 @@ const NoteBookInteriorPage = () => {
                 </div>
 
                 {/* Pen Settings Panel (Right side) */}
-                <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden
-                    }`}>
+                <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden}`}>
                     <PenSettingPanel
                         onColorChange={handleColorChange}
                         onStrokeWidthChange={handleStrokeWidthChange}
@@ -362,17 +396,7 @@ const NoteBookInteriorPage = () => {
                         onClick={() => setIsPenPanelVisible(!isPenPanelVisible)}
                         title={isPenPanelVisible ? "Hide pen settings" : "Show pen settings"}
                     >
-                        <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className={isPenPanelVisible ? styles.rotate : ''}
-                        >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPenPanelVisible ? styles.rotate : ''}>
                             <path d="m9 18 6-6-6-6" />
                         </svg>
                     </button>

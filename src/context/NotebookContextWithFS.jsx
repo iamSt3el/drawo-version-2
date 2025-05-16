@@ -1,5 +1,5 @@
-// contexts/NotebookContextWithFS.jsx - Updated context with filesystem integration
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// contexts/NotebookContextWithFS.jsx - Fixed version with proper filter logic
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 // For Electron integration
 const { ipcRenderer } = window.require ? window.require('electron') : { ipcRenderer: null };
@@ -19,7 +19,6 @@ export const useNotebooks = () => {
 // Enhanced Notebook provider component with filesystem integration
 export const NotebookProvider = ({ children }) => {
   const [notebooks, setNotebooks] = useState([]);
-  const [filteredNotebooks, setFilteredNotebooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentNotebook, setCurrentNotebook] = useState(null);
   const [currentPage, setCurrentPage] = useState(null);
@@ -35,42 +34,23 @@ export const NotebookProvider = ({ children }) => {
   // Check if running in Electron
   const isElectron = !!ipcRenderer;
 
+  // Use useMemo for filtering instead of useEffect to prevent infinite loops
+  const filteredNotebooks = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return notebooks;
+    }
+    
+    return notebooks.filter(notebook =>
+      notebook.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notebook.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [notebooks, searchQuery]);
+
   // Initialize - Load notebooks from filesystem
   useEffect(() => {
     loadNotebooks();
     loadAppSettings();
   }, []);
-
-  
-// Filter notebooks based on search query
-useEffect(() => {
-  // Use a memoization approach to prevent unnecessary updates
-  const applyFilter = () => {
-    if (!searchQuery.trim()) {
-      // Only update if the arrays are actually different
-      if (filteredNotebooks.length !== notebooks.length) {
-        setFilteredNotebooks(notebooks);
-      }
-    } else {
-      const filtered = notebooks.filter(notebook =>
-        notebook.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        notebook.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      
-      // Only update state if the filtered results are different
-      const currentIds = new Set(filteredNotebooks.map(nb => nb.id));
-      const newIds = new Set(filtered.map(nb => nb.id));
-      
-      // Check if the sets are different
-      if (currentIds.size !== newIds.size || 
-          filtered.some(nb => !currentIds.has(nb.id))) {
-        setFilteredNotebooks(filtered);
-      }
-    }
-  };
-  
-  applyFilter();
-}, [notebooks, searchQuery, filteredNotebooks]);
 
   // Load all notebooks from filesystem
   const loadNotebooks = async () => {
@@ -275,7 +255,14 @@ useEffect(() => {
         if (result.success) {
           setCurrentPage(result.page);
           if (result.page.settings) {
-            setPageSettings(result.page.settings);
+            // Use callback to prevent infinite loops
+            setPageSettings(prev => {
+              // Only update if settings are actually different
+              if (JSON.stringify(prev) !== JSON.stringify(result.page.settings)) {
+                return result.page.settings;
+              }
+              return prev;
+            });
           }
           return result.page;
         } else {
@@ -291,7 +278,14 @@ useEffect(() => {
         if (page) {
           setCurrentPage(page);
           if (page.settings) {
-            setPageSettings(page.settings);
+            // Use callback to prevent infinite loops
+            setPageSettings(prev => {
+              // Only update if settings are actually different
+              if (JSON.stringify(prev) !== JSON.stringify(page.settings)) {
+                return page.settings;
+              }
+              return prev;
+            });
           }
           return page;
         } else {
@@ -371,9 +365,15 @@ useEffect(() => {
     setSearchQuery(query);
   };
 
-  // Update page settings
+  // Update page settings - use callback to prevent infinite loops
   const updatePageSettings = (newSettings) => {
-    setPageSettings(prev => ({ ...prev, ...newSettings }));
+    setPageSettings(prev => {
+      // Only update if settings are actually different
+      if (JSON.stringify(prev) !== JSON.stringify(newSettings)) {
+        return { ...prev, ...newSettings };
+      }
+      return prev;
+    });
   };
 
   // Create backup

@@ -1,4 +1,4 @@
-// src/components/molecules/NoteBookUi/NoteBookUi.jsx
+// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Simplified loading
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import styles from './NoteBookUi.module.scss'
 import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
@@ -44,10 +44,14 @@ const NoteBookUi = forwardRef(({
     };
   }, []);
 
-  // Load initial canvas data when provided
+  // Simple loading: whenever initialCanvasData changes, load it
   useEffect(() => {
-    if (initialCanvasData && canvasRef.current) {
-      canvasRef.current.loadCanvasData(initialCanvasData);
+    if (canvasRef.current && initialCanvasData) {
+      console.log('NoteBookUi: Loading initial data');
+      canvasRef.current.loadDrawingData(initialCanvasData);
+    } else if (canvasRef.current && !initialCanvasData) {
+      console.log('NoteBookUi: No initial data, clearing canvas');
+      canvasRef.current.clearCanvas();
     }
   }, [initialCanvasData]);
 
@@ -107,15 +111,15 @@ const NoteBookUi = forwardRef(({
     }
   };
 
-  const handleCanvasChange = (dataUrl) => {
+  const handleCanvasChange = (vectorData) => {
     if (onCanvasChange) {
-      onCanvasChange(dataUrl);
+      onCanvasChange(vectorData);
     }
   };
 
   const backgroundStyle = generateBackgroundPattern();
 
-  // Expose methods via ref
+  // Expose methods via ref - now using vector data methods
   useImperativeHandle(ref, () => ({
     clearCanvas: () => {
       if (canvasRef.current) {
@@ -134,9 +138,29 @@ const NoteBookUi = forwardRef(({
       }
       return '';
     },
-    loadCanvasData: (dataUrl) => {
+    exportJSON: () => {
       if (canvasRef.current) {
-        canvasRef.current.loadCanvasData(dataUrl);
+        return canvasRef.current.exportJSON();
+      }
+      return null;
+    },
+    exportSVG: () => {
+      if (canvasRef.current) {
+        return canvasRef.current.exportSVG();
+      }
+      return '';
+    },
+    // Simple loading function - just pass data through
+    loadCanvasData: (vectorData) => {
+      if (canvasRef.current && vectorData) {
+        console.log('NoteBookUi: Loading data via ref');
+        canvasRef.current.loadDrawingData(vectorData);
+      }
+    },
+    loadDrawingData: (vectorData) => {
+      if (canvasRef.current && vectorData) {
+        console.log('NoteBookUi: Loading data via loadDrawingData');
+        canvasRef.current.loadDrawingData(vectorData);
       }
     },
     canvasRef: canvasRef.current // Expose canvas ref for direct access
@@ -150,7 +174,14 @@ const NoteBookUi = forwardRef(({
         ))}
       </div>
 
-      <div className={styles.notebookui_content} style={backgroundStyle}>
+      <div 
+        className={styles.notebookui_content} 
+        style={{
+          ...backgroundStyle,
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
         <SmoothCanvas
           ref={canvasRef}
           width={canvasSize.width}
@@ -160,7 +191,6 @@ const NoteBookUi = forwardRef(({
           strokeWidth={strokeWidth}
           eraserWidth={eraserWidth}
           onCanvasChange={handleCanvasChange}
-          initialCanvasData={initialCanvasData}
         />
       </div>
     </div>

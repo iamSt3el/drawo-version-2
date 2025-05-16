@@ -423,6 +423,77 @@
     }
 }
 
+
+/* Add to src/pages/NoteBookInteriorPage/NoteBookInteriorPage.module.scss */
+
+/* Export buttons styling */
+.export_buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    
+    button {
+      padding: 0.5rem 1rem;
+      background-color: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background-color: #e5e7eb;
+        border-color: #9ca3af;
+        transform: translateY(-1px);
+      }
+      
+      &:active {
+        transform: translateY(0);
+      }
+    }
+  }
+  
+  /* Update the save status to indicate vector save */
+  .save_status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    color: #15803d;
+    font-size: 0.875rem;
+    font-weight: 500;
+    position: absolute;
+    right: 1rem;
+  
+    &::before {
+      content: '●';
+      color: #22c55e;
+      animation: pulse 2s infinite;
+    }
+  
+    &.saving {
+      background-color: #fef3c7;
+      border-color: #fbbf24;
+      color: #92400e;
+      
+      &::before {
+        color: #f59e0b;
+      }
+    }
+  }
+  
+  /* Responsive design for export buttons */
+  @media screen and (max-width: 768px) {
+    .export_buttons {
+      display: none; // Hide on mobile to save space
+    }
+  }
+
 @media screen and (max-width: 768px) {
     .notebook_interior {
         .notebook_interior_canvas {
