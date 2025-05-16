@@ -2,10 +2,10 @@
 import React, { useState } from 'react'
 import styles from './ToolBar.module.scss'
 import { Button } from '../../atoms'
-import { Eraser, MoveLeft, PaletteIcon, Pen, Undo, RotateCcw } from 'lucide-react'
+import { Eraser, MoveLeft, PaletteIcon, Pen, Undo, RotateCcw, MoveRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
-const ToolBar = ({ onToolChange, onClearCanvas, onUndo, setIsPen }) => {
+const ToolBar = ({ onToolChange, onClearCanvas, onUndo, setIsPen, handlePreviousPage, handleNextPage }) => {
   const navigate = useNavigate();
   const [activeTool, setActiveTool] = useState('pen');
 
@@ -68,6 +68,11 @@ const ToolBar = ({ onToolChange, onClearCanvas, onUndo, setIsPen }) => {
             label={"clear"}
             onClick={handleClearCanvas}
           />
+        </div>
+
+        <div className={styles.navigation_tools}>
+          <Button Icon={MoveLeft} label={'Previous Page (ctrl + ->)'} onClick={handlePreviousPage}/>
+          <Button Icon={MoveRight} label={'Next Page (ctrl + <-'} onClick={handleNextPage}/>
         </div>
       </div>
     </div>

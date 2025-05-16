@@ -1,4 +1,4 @@
-// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed to ensure data is saved
+// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed to properly handle page data loading
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
 import { useParams } from 'react-router-dom'
@@ -14,7 +14,8 @@ const NoteBookInteriorPage = () => {
     const { id } = useParams();
     const { savePage: savePageToContext } = useNotebooks();
     const notebookUiRef = useRef(null);
-    const lastLoadedPageNumber = useRef(null);
+    const lastLoadedPageRef = useRef({ pageNumber: null, dataId: null });
+    const settingsChangeTimeoutRef = useRef(null);
 
     // Use custom hook for notebook data management - pass canvas ref
     const {
@@ -53,15 +54,25 @@ const NoteBookInteriorPage = () => {
     const [isPenPanelVisible, setIsPenPanelVisible] = useState(true);
     const [isPagePanelVisible, setIsPagePanelVisible] = useState(true);
 
-    // Simple auto-save - save canvas changes but preserve existing settings
+    // Enhanced auto-save that properly handles both canvas and settings
     const { debouncedSave, saveNow } = useCanvasAutoSave(async (vectorData) => {
         setIsSaving(true);
         try {
             console.log('Auto-save triggered for page:', currentPageNumber);
-            // Pass current settings to preserve them during auto-save
-            await saveCurrentPage(vectorData, currentPageSettings);
+            console.log('Current settings during auto-save:', currentPageSettings);
+            
+            // Save with current settings
+            const pageDataToSave = {
+                notebookId: notebook.id,
+                pageNumber: currentPageNumber,
+                canvasData: vectorData,
+                settings: currentPageSettings
+            };
+            
+            await savePageToContext(pageDataToSave);
+            console.log('Auto-save completed with settings:', currentPageSettings);
         } catch (error) {
-            console.error('Error saving page:', error);
+            console.error('Error during auto-save:', error);
         } finally {
             setIsSaving(false);
         }
@@ -72,32 +83,64 @@ const NoteBookInteriorPage = () => {
         ? `rgba(${parseInt(strokeColor.slice(1, 3), 16)}, ${parseInt(strokeColor.slice(3, 5), 16)}, ${parseInt(strokeColor.slice(5, 7), 16)}, ${opacity / 100})`
         : strokeColor;
 
-    // Load page settings ONLY when page number changes
+    // Enhanced page data change detection
     useEffect(() => {
-        if (currentPageData && 
-            currentPageData.settings && 
-            lastLoadedPageNumber.current !== currentPageNumber) {
-            
-            console.log('Loading page settings for page', currentPageNumber, ':', currentPageData.settings);
-            setCurrentPageSettings(currentPageData.settings);
-            lastLoadedPageNumber.current = currentPageNumber;
+        if (!currentPageData) {
+            console.log('No current page data');
+            return;
         }
-    }, [currentPageNumber]);
 
-    // Load canvas data when page changes (but don't refresh on settings change)
-    useEffect(() => {
-        if (notebookUiRef.current && currentPageData) {
-            console.log(`Loading page ${currentPageNumber} data:`, currentPageData.canvasData?.length || 0, 'characters');
+        // Create a unique identifier for this page data
+        const dataId = `${currentPageData.id}_${currentPageData.lastModified || Date.now()}_${JSON.stringify(currentPageData.settings)}`;
+        
+        console.log('Page data changed:', {
+            pageNumber: currentPageNumber,
+            dataId: dataId,
+            lastDataId: lastLoadedPageRef.current.dataId,
+            settings: currentPageData.settings,
+            canvasDataLength: currentPageData.canvasData?.length || 0
+        });
+
+        // Only process if this is actually new data
+        if (lastLoadedPageRef.current.dataId !== dataId) {
+            console.log('Processing new page data for page', currentPageNumber);
             
-            // Only load canvas data, don't refresh for settings
-            if (currentPageData.canvasData) {
-                notebookUiRef.current.loadCanvasData(currentPageData.canvasData);
+            // Load settings if available
+            if (currentPageData.settings) {
+                console.log('Loading page settings for page', currentPageNumber, ':', currentPageData.settings);
+                setCurrentPageSettings({ ...currentPageData.settings });
             } else {
-                // Clear canvas for new empty pages
+                console.log('No settings found for page', currentPageNumber, ', using defaults');
+                setCurrentPageSettings({
+                    pattern: 'grid',
+                    patternSize: 20,
+                    patternColor: '#e5e7eb',
+                    patternOpacity: 50
+                });
+            }
+
+            // Load canvas data
+            if (notebookUiRef.current && currentPageData.canvasData) {
+                console.log(`Loading canvas data for page ${currentPageNumber}:`, currentPageData.canvasData.length, 'characters');
+                // Add a small delay to ensure React state has updated
+                setTimeout(() => {
+                    notebookUiRef.current.loadCanvasData(currentPageData.canvasData);
+                }, 50);
+            } else if (notebookUiRef.current) {
+                // Clear canvas for new pages
+                console.log(`Clearing canvas for new page ${currentPageNumber}`);
                 notebookUiRef.current.clearCanvas();
             }
+
+            // Update the ref to track this data
+            lastLoadedPageRef.current = {
+                pageNumber: currentPageNumber,
+                dataId: dataId
+            };
+        } else {
+            console.log('Same page data, skipping reload');
         }
-    }, [currentPageNumber, currentPageData?.canvasData]);
+    }, [currentPageData, currentPageNumber]);
 
     const handleToolChange = (tool) => {
         setCurrentTool(tool);
@@ -119,6 +162,7 @@ const NoteBookInteriorPage = () => {
     // Canvas change handler - trigger debounced save with current settings
     const handleCanvasChange = useCallback((vectorData) => {
         console.log('Canvas change detected for page:', currentPageNumber);
+        // Don't trigger auto-save immediately if we just changed page
         debouncedSave(vectorData);
     }, [debouncedSave, currentPageNumber]);
 
@@ -136,20 +180,57 @@ const NoteBookInteriorPage = () => {
         }
     };
 
-    // Page settings handler - updates local state only, saves when navigating
+    // Page settings handler - updates local state and triggers debounced save
     const handlePageSettingChange = useCallback((settingName, value) => {
         console.log(`Changing ${settingName} to ${value}`);
         const newSettings = { ...currentPageSettings, [settingName]: value };
         
-        // Update local page settings immediately
+        // Update local page settings immediately for UI responsiveness
         setCurrentPageSettings(newSettings);
-    }, [currentPageSettings]);
+        
+        // Clear any existing timeout
+        if (settingsChangeTimeoutRef.current) {
+            clearTimeout(settingsChangeTimeoutRef.current);
+        }
+        
+        // Set a debounced save for settings changes
+        settingsChangeTimeoutRef.current = setTimeout(async () => {
+            try {
+                console.log('Saving settings change:', newSettings);
+                const vectorData = notebookUiRef.current ? notebookUiRef.current.exportJSON() : null;
+                
+                const pageDataToSave = {
+                    notebookId: notebook.id,
+                    pageNumber: currentPageNumber,
+                    canvasData: vectorData,
+                    settings: newSettings
+                };
+                
+                await savePageToContext(pageDataToSave);
+                console.log('Settings saved successfully:', newSettings);
+            } catch (error) {
+                console.error('Error saving settings:', error);
+            }
+        }, 500); // 500ms debounce for settings changes
+        
+    }, [currentPageSettings, notebook, currentPageNumber, savePageToContext]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (settingsChangeTimeoutRef.current) {
+                clearTimeout(settingsChangeTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // Enhanced save before navigation to include settings
     const saveBeforeNavigation = useCallback(async () => {
-        if (notebookUiRef.current) {
+        if (notebookUiRef.current && notebook) {
             try {
                 const vectorData = notebookUiRef.current.exportJSON();
+                
+                console.log('Current page settings before navigation:', currentPageSettings);
                 
                 // Use the direct save to context function with all data
                 const pageDataToSave = {
@@ -159,7 +240,7 @@ const NoteBookInteriorPage = () => {
                     settings: currentPageSettings
                 };
                 
-                console.log('Saving before navigation:', pageDataToSave);
+                console.log('Complete page data being saved before navigation:', pageDataToSave);
                 await savePageToContext(pageDataToSave);
                 console.log('Page and settings saved before navigation');
             } catch (error) {
@@ -168,25 +249,38 @@ const NoteBookInteriorPage = () => {
         }
     }, [notebook, currentPageNumber, currentPageSettings, savePageToContext]);
 
-    // Update navigation handlers to use the new save function
+    // Update navigation handlers to use the enhanced save function
     const handlePreviousPage = async () => {
         if (currentPageNumber > 1) {
+            // Clear any pending settings save timeouts
+            if (settingsChangeTimeoutRef.current) {
+                clearTimeout(settingsChangeTimeoutRef.current);
+                settingsChangeTimeoutRef.current = null;
+            }
+            
             await saveBeforeNavigation();
             await previousPage();
         }
     };
 
     const handleNextPage = async () => {
+        // Clear any pending settings save timeouts
+        if (settingsChangeTimeoutRef.current) {
+            clearTimeout(settingsChangeTimeoutRef.current);
+            settingsChangeTimeoutRef.current = null;
+        }
+        
         await saveBeforeNavigation();
         await nextPage();
     };
 
     // Update manual save to include settings
     const handleManualSave = async () => {
-        if (notebookUiRef.current) {
+        if (notebookUiRef.current && notebook) {
             setIsSaving(true);
             try {
                 await saveBeforeNavigation(); // This includes both canvas and settings
+                console.log('Manual save completed');
             } catch (error) {
                 console.error('Error during manual save:', error);
             } finally {
@@ -203,7 +297,7 @@ const NoteBookInteriorPage = () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `page-${currentPageNumber}.svg`;
+            a.download = `${notebook?.title || 'notebook'}-page-${currentPageNumber}.svg`;
             a.click();
             URL.revokeObjectURL(url);
         }
@@ -214,35 +308,35 @@ const NoteBookInteriorPage = () => {
             const imageData = await notebookUiRef.current.exportImage('png');
             const a = document.createElement('a');
             a.href = imageData;
-            a.download = `page-${currentPageNumber}.png`;
+            a.download = `${notebook?.title || 'notebook'}-page-${currentPageNumber}.png`;
             a.click();
         }
     };
 
     // Keyboard shortcuts
     useEffect(() => {
-        const handleKeyPress = (e) => {
+        const handleKeyPress = async (e) => {
             if (e.ctrlKey || e.metaKey) {
                 switch (e.key) {
                     case 'ArrowLeft':
                         e.preventDefault();
-                        handlePreviousPage();
+                        await handlePreviousPage();
                         break;
                     case 'ArrowRight':
                         e.preventDefault();
-                        handleNextPage();
+                        await handleNextPage();
                         break;
                     case 's':
                         e.preventDefault();
-                        handleManualSave();
+                        await handleManualSave();
                         break;
                     case 'e':
                         e.preventDefault();
-                        handleExportSVG();
+                        await handleExportSVG();
                         break;
                     case 'i':
                         e.preventDefault();
-                        handleExportImage();
+                        await handleExportImage();
                         break;
                     default:
                         break;
@@ -252,7 +346,7 @@ const NoteBookInteriorPage = () => {
 
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [currentPageNumber, notebook]);
+    }, [currentPageNumber, notebook, handlePreviousPage, handleNextPage, handleManualSave]);
 
     if (loading) {
         return (
@@ -286,6 +380,8 @@ const NoteBookInteriorPage = () => {
                     onClearCanvas={handleClearCanvas}
                     onUndo={handleUndo}
                     setIsPen={setIsPen}
+                    handleNextPage={handleNextPage}
+                    handlePreviousPage={handlePreviousPage}
                 />
 
                 {/* Page Info in Toolbar */}
@@ -341,7 +437,7 @@ const NoteBookInteriorPage = () => {
                         onClick={handlePreviousPage}
                         disabled={currentPageNumber <= 1 || isSaving}
                         className={styles.nav_button}
-                        title="Previous page"
+                        title="Previous page (Ctrl+←)"
                     >
                         <ChevronLeft size={24} />
                     </button>
@@ -359,7 +455,7 @@ const NoteBookInteriorPage = () => {
                         patternColor={currentPageSettings.patternColor}
                         patternOpacity={currentPageSettings.patternOpacity}
                         onCanvasChange={handleCanvasChange}
-                        key={currentPageNumber}
+                        key={currentPageNumber} // Simple key based on page number
                         initialCanvasData={currentPageData?.canvasData}
                     />
                 </div>
@@ -370,7 +466,7 @@ const NoteBookInteriorPage = () => {
                         onClick={handleNextPage}
                         disabled={currentPageNumber >= totalPages || isSaving}
                         className={styles.nav_button}
-                        title="Next page"
+                        title="Next page (Ctrl+→)"
                     >
                         <ChevronRight size={24} />
                     </button>

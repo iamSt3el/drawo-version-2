@@ -1,4 +1,4 @@
-// hooks/useNotebookData.js - Remove global pageSettings dependencies
+// hooks/useNotebookData.js - Fixed to avoid race conditions completely
 import { useState, useEffect, useCallback } from 'react';
 import { useNotebooks } from '../context/NotebookContextWithFS';
 
@@ -9,7 +9,7 @@ export const useNotebookData = (notebookId, canvasRef = null) => {
     savePage,
     loadPage,
     loadPagesByNotebook
-  } = useNotebooks(); // Remove pageSettings and updatePageSettings
+  } = useNotebooks();
 
   const [notebook, setNotebook] = useState(null);
   const [pages, setPages] = useState([]);
@@ -124,14 +124,15 @@ export const useNotebookData = (notebookId, canvasRef = null) => {
     }
   };
 
-  // Save current page with canvas data (simplified - no longer needs settings from context)
-  const saveCurrentPage = useCallback(async (canvasData) => {
+  // Save current page with canvas data (now accepts optional pageSettings)
+  const saveCurrentPage = useCallback(async (canvasData, pageSettings = null) => {
     if (!notebook) return;
 
     try {
       console.log('Saving page data:', { 
         pageNumber: currentPageNumber, 
         hasData: !!canvasData,
+        hasSettings: !!pageSettings,
         dataType: typeof canvasData,
         dataLength: canvasData ? JSON.stringify(canvasData).length : 0
       });
@@ -142,12 +143,20 @@ export const useNotebookData = (notebookId, canvasRef = null) => {
         finalCanvasData = getCurrentCanvasData();
       }
 
-      // Don't pass settings here - they'll be passed from the component
+      // Build page data - only include settings if explicitly provided
       const pageData = {
         notebookId: notebook.id,
         pageNumber: currentPageNumber,
         canvasData: typeof finalCanvasData === 'string' ? finalCanvasData : JSON.stringify(finalCanvasData)
       };
+
+      // Only include settings if provided - this prevents overwriting existing settings
+      if (pageSettings) {
+        pageData.settings = pageSettings;
+        console.log('Including settings in save:', pageSettings);
+      } else {
+        console.log('NOT including settings - preserving existing settings');
+      }
 
       const savedPage = await savePage(pageData);
       setCurrentPageData(savedPage);
@@ -195,36 +204,16 @@ export const useNotebookData = (notebookId, canvasRef = null) => {
     return notebook?.totalPages || notebook?.pages || 100;
   }, [notebook]);
 
-  // Navigate to a specific page - simplified without settings
+  // Navigate to a specific page - COMPLETELY REMOVED redundant save during navigation
   const navigateToPage = useCallback(async (pageNumber, saveCurrentFirst = true) => {
     const totalPages = getTotalPages();
     if (!notebook || pageNumber < 1 || pageNumber > totalPages) return;
 
     console.log(`Navigating to page ${pageNumber}`);
     
-    // Save current page if requested and different from target page
-    if (saveCurrentFirst && currentPageNumber !== pageNumber && currentPageData) {
-      console.log(`Saving current page ${currentPageNumber} before navigation`);
-      try {
-        // Get the latest canvas data before saving
-        const vectorData = getCurrentCanvasData ? getCurrentCanvasData() : 
-                          (currentPageData?.canvasData || JSON.stringify({
-                            type: 'drawing',
-                            version: 1,
-                            elements: [],
-                            appState: {
-                              width: 870,
-                              height: 870
-                            }
-                          }));
-        
-        await saveCurrentPage(vectorData);
-        console.log(`Successfully saved page ${currentPageNumber} before navigation`);
-      } catch (error) {
-        console.error(`Error saving page ${currentPageNumber} before navigation:`, error);
-        // Continue with navigation even if save fails
-      }
-    }
+    // REMOVED: The redundant save here that was causing race conditions
+    // The component (NoteBookInteriorPage) handles saving before navigation
+    // We only need to update the page number and load the new page
     
     setCurrentPageNumber(pageNumber);
 
@@ -234,6 +223,7 @@ export const useNotebookData = (notebookId, canvasRef = null) => {
       console.log(`Attempting to load page: ${pageId}`);
       const pageData = await loadPage(pageId);
       console.log(`Successfully loaded page ${pageNumber} with data:`, pageData.canvasData?.length || 0, 'characters');
+      console.log(`Page ${pageNumber} settings:`, pageData.settings);
       setCurrentPageData(pageData);
     } catch (error) {
       // Page doesn't exist yet, create empty page data
@@ -293,21 +283,20 @@ export const useNotebookData = (notebookId, canvasRef = null) => {
       }
     }
   }, [notebook, loadPage, getTotalPages, 
-      savePage, updateNotebook, currentPageNumber, currentPageData, 
-      saveCurrentPage, getCurrentCanvasData]);
+      savePage, updateNotebook, currentPageNumber, currentPageData]);
 
   // Navigate to next page
   const nextPage = useCallback(() => {
     const totalPages = getTotalPages();
     if (currentPageNumber < totalPages) {
-      navigateToPage(currentPageNumber + 1, true); // true = save current page first
+      navigateToPage(currentPageNumber + 1, false); // false = don't save here, component handles it
     }
   }, [currentPageNumber, getTotalPages, navigateToPage]);
 
   // Navigate to previous page
   const previousPage = useCallback(() => {
     if (currentPageNumber > 1) {
-      navigateToPage(currentPageNumber - 1, true); // true = save current page first
+      navigateToPage(currentPageNumber - 1, false); // false = don't save here, component handles it
     }
   }, [currentPageNumber, navigateToPage]);
 

@@ -120,24 +120,53 @@ async saveNotebook(notebook) {
 // data/DataManager.js - Simple fix to ensure settings are saved
 
 // Update the savePage function to be simpler:
+// data/DataManager.js - Updated savePage function to preserve existing settings
 async savePage(pageData) {
   try {
     const { notebookId, pageNumber, canvasData, settings, ...otherData } = pageData;
     const pageId = `${notebookId}_page_${pageNumber}`;
     
-    // Simple approach - use the provided settings directly
-    console.log(settings)
+    console.log('DataManager saving page:', pageId, 'with settings:', settings);
+    
+    // If settings are not provided, try to load existing settings from the file
+    let finalSettings = settings;
+    
+    if (!settings) {
+      console.log('No settings provided, attempting to preserve existing settings...');
+      try {
+        const existingPageResult = await this.loadPage(pageId);
+        if (existingPageResult.success && existingPageResult.page.settings) {
+          finalSettings = existingPageResult.page.settings;
+          console.log('Preserved existing settings:', finalSettings);
+        } else {
+          // Use default settings if no existing settings found
+          finalSettings = {
+            pattern: 'grid',
+            patternSize: 20,
+            patternColor: '#e5e7eb',
+            patternOpacity: 50
+          };
+          console.log('Using default settings:', finalSettings);
+        }
+      } catch (loadError) {
+        console.log('No existing page found, using default settings');
+        finalSettings = {
+          pattern: 'grid',
+          patternSize: 20,
+          patternColor: '#e5e7eb',
+          patternOpacity: 50
+        };
+      }
+    }
+
+    console.log('Final settings being saved:', finalSettings);
+
     const page = {
       id: pageId,
       notebookId,
       pageNumber,
       canvasData,
-      settings: settings || {
-        pattern: 'grid',
-        patternSize: 20,
-        patternColor: '#e5e7eb',
-        patternOpacity: 50
-      },
+      settings: finalSettings,
       lastModified: new Date().toISOString(),
       ...otherData
     };
@@ -148,6 +177,7 @@ async savePage(pageData) {
     // Update notebook's pages array
     await this.addPageToNotebook(notebookId, pageId);
     
+    console.log('Page saved successfully with final settings:', finalSettings);
     return { success: true, page };
   } catch (error) {
     console.error('Error saving page:', error);

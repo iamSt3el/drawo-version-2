@@ -1,7 +1,9 @@
 // src/components/molecules/ToolBar/ToolBar.module.scss
 .toolbar_cover {
   display: flex;
+  
   flex-direction: column;
+  justify-content: space-between;
   align-items: center;
   position: relative;
 
@@ -33,7 +35,7 @@
       cursor: pointer;
       flex-wrap: wrap;
       max-width: 80vw;
-      justify-content: center;
+      //justify-content: center;
     }
   }
 }
@@ -80,6 +82,26 @@
       }
     }
   }
+}
+
+
+.navigation_tools{
+  position: absolute;
+  right: 1rem;
+  
+
+  display: flex;
+  gap: 1rem;
+  align-items:flex-end;
+  padding: 0.5rem 1rem;
+  background-color: #f8fafc;
+  border-radius: 0.5rem;
+  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+  transition: all 0.3s ease-in-out;
+  cursor: pointer;
+  flex-wrap: wrap;
+  max-width: 80vw;
+  
 }
 
 // Stroke width control styles
