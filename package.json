@@ -2,6 +2,17 @@
   "name": "drawo",
   "version": "0.1.0",
   "private": true,
+  "author": "Captain Electron",
+  "homepage": "./",
+  "main": "src/main/electron.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "electron-dev": "concurrently \"BROWSER=none yarn start\" \"wait-on http://localhost:3000 && ELECTRON_OZONE_PLATFORM_HINT=x11 electron src/main/electron.js\"",
+    "electron-pack": "yarn build && electron-builder"
+  },
   "dependencies": {
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -12,14 +23,15 @@
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.0"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "electron-dev": "concurrently \"BROWSER=none yarn start\" \"wait-on http://localhost:3000 && ELECTRON_OZONE_PLATFORM_HINT=x11 electron .\"",
-    "electron-pack": "electron-builder -c.extraMetadata.main=build/electron.js -l",
-    "preelectron-pack": "yarn build && cp public/electron.js build/ && cp public/electron-data-handler.js build/ && cp -r data build/"
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^36.2.0",
+    "electron-builder": "^26.0.12",
+    "lucide-react": "^0.510.0",
+    "perfect-freehand": "^1.2.2",
+    "react-router-dom": "^7.6.0",
+    "sass": "^1.88.0",
+    "wait-on": "^8.0.3"
   },
   "eslintConfig": {
     "extends": [
@@ -39,27 +51,36 @@
       "last 1 safari version"
     ]
   },
-  "devDependencies": {
-    "concurrently": "^9.1.2",
-    "electron": "^36.2.0",
-    "electron-builder": "^26.0.12",
-    "lucide-react": "^0.510.0",
-    "perfect-freehand": "^1.2.2",
-    "react-router-dom": "^7.6.0",
-    "sass": "^1.88.0",
-    "wait-on": "^8.0.3"
-  },
-  "main": "public/electron.js",
-  "author": "Captain Electron",
-  "homepage": "./",
   "build": {
-    "appId": "com.example.react-electron-app",
+    "appId": "com.drawo.app",
+    "productName": "Drawo",
+    "extraMetadata": {
+      "main": "src/main/electron.js"
+    },
     "files": [
       "build/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "src/main/**/*",
+      "src/DataManager.js"
     ],
     "directories": {
       "buildResources": "assets"
+    },
+    "mac": {
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "assets/icon.png",
+      "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }

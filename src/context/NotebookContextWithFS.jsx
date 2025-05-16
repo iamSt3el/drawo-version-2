@@ -1,4 +1,4 @@
-// context/NotebookContextWithFS.jsx - Remove global pageSettings
+// context/NotebookContextWithFS.jsx - Updated with data directory management
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 // For Electron integration
@@ -22,9 +22,9 @@ export const NotebookProvider = ({ children }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentNotebook, setCurrentNotebook] = useState(null);
   const [currentPage, setCurrentPage] = useState(null);
-  // Remove global pageSettings - each page will manage its own settings
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [dataDirectoryInfo, setDataDirectoryInfo] = useState(null);
 
   // Check if running in Electron
   const isElectron = !!ipcRenderer;
@@ -41,11 +41,132 @@ export const NotebookProvider = ({ children }) => {
     );
   }, [notebooks, searchQuery]);
 
-  // Initialize - Load notebooks from filesystem
+  // Initialize - Load notebooks from filesystem and get directory info
   useEffect(() => {
+    loadDataDirectoryInfo();
     loadNotebooks();
     loadAppSettings();
   }, []);
+
+  // Load data directory information
+  const loadDataDirectoryInfo = async () => {
+    if (isElectron) {
+      try {
+        const result = await ipcRenderer.invoke('data-get-directory-info');
+        if (result.success) {
+          setDataDirectoryInfo(result.directoryInfo);
+          return result.directoryInfo;
+        }
+      } catch (error) {
+        console.error('Error loading data directory info:', error);
+      }
+    }
+    return null;
+  };
+
+  // Select new data directory
+  const selectDataDirectory = async () => {
+    if (isElectron) {
+      try {
+        const result = await ipcRenderer.invoke('data-select-directory');
+        if (result.success) {
+          setDataDirectoryInfo({ ...dataDirectoryInfo, baseDir: result.path });
+          // Reload notebooks from new directory
+          await loadNotebooks();
+          return result;
+        } else {
+          setError(result.error);
+          return result;
+        }
+      } catch (error) {
+        console.error('Error selecting data directory:', error);
+        setError(error.message);
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, error: 'Directory selection not available in web version' };
+    }
+  };
+
+  // Change data directory programmatically
+  const changeDataDirectory = async (newPath) => {
+    if (isElectron) {
+      try {
+        const result = await ipcRenderer.invoke('data-change-directory', newPath);
+        if (result.success) {
+          setDataDirectoryInfo({ ...dataDirectoryInfo, baseDir: result.path });
+          await loadNotebooks();
+          return result;
+        } else {
+          setError(result.error);
+          return result;
+        }
+      } catch (error) {
+        console.error('Error changing data directory:', error);
+        setError(error.message);
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, error: 'Directory change not available in web version' };
+    }
+  };
+
+  // Reset to default data directory
+  const resetToDefaultDirectory = async () => {
+    if (isElectron) {
+      try {
+        const result = await ipcRenderer.invoke('data-reset-to-default-directory');
+        if (result.success) {
+          setDataDirectoryInfo({ ...dataDirectoryInfo, baseDir: result.path });
+          await loadNotebooks();
+          return result;
+        } else {
+          setError(result.error);
+          return result;
+        }
+      } catch (error) {
+        console.error('Error resetting to default directory:', error);
+        setError(error.message);
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, error: 'Directory reset not available in web version' };
+    }
+  };
+
+  // Export all data
+  const exportAllData = async () => {
+    if (isElectron) {
+      try {
+        const result = await ipcRenderer.invoke('data-export-all-data');
+        return result;
+      } catch (error) {
+        console.error('Error exporting data:', error);
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, error: 'Export not available in web version' };
+    }
+  };
+
+  // Import data
+  const importData = async () => {
+    if (isElectron) {
+      try {
+        const result = await ipcRenderer.invoke('data-import-data');
+        if (result.success) {
+          // Reload notebooks after import
+          await loadNotebooks();
+        }
+        return result;
+      } catch (error) {
+        console.error('Error importing data:', error);
+        return { success: false, error: error.message };
+      }
+    } else {
+      return { success: false, error: 'Import not available in web version' };
+    }
+  };
 
   // Load all notebooks from filesystem
   const loadNotebooks = async () => {
@@ -339,9 +460,12 @@ export const NotebookProvider = ({ children }) => {
     try {
       if (isElectron) {
         const result = await ipcRenderer.invoke('data-load-app-settings');
-        // We don't need to store default page settings globally anymore
+        if (result.success) {
+          return result.settings;
+        }
       } else {
-        // We don't need to store default page settings globally anymore
+        const settings = localStorage.getItem('appSettings');
+        return settings ? JSON.parse(settings) : null;
       }
     } catch (error) {
       console.error('Error loading app settings:', error);
@@ -415,6 +539,7 @@ export const NotebookProvider = ({ children }) => {
     currentPage,
     isLoading,
     error,
+    dataDirectoryInfo,
     
     // Notebook functions
     addNotebook,
@@ -429,12 +554,22 @@ export const NotebookProvider = ({ children }) => {
     loadPage,
     loadPagesByNotebook,
     
-    // Settings functions - removed pageSettings and updatePageSettings
+    // Settings functions
     loadAppSettings,
     saveAppSettings,
     
     // Search
     updateSearchQuery,
+    
+    // Data directory management
+    loadDataDirectoryInfo,
+    selectDataDirectory,
+    changeDataDirectory,
+    resetToDefaultDirectory,
+    
+    // Import/Export
+    exportAllData,
+    importData,
     
     // Utility functions
     createBackup,

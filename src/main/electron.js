@@ -4,7 +4,6 @@ const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 
 const path = require('path');
-const url = require('url');
 const isDev = process.env.NODE_ENV === 'development' || /electron(.exe)?$/.test(process.execPath);
 // Import the data handler
 const ElectronDataHandler = require('./electron-data-handler');
@@ -25,10 +24,11 @@ function createWindow() {
   });
 
   mainWindow.loadURL(
-    isDev 
-      ? 'http://localhost:3000' 
-      : `file://${path.join(__dirname, '../build/index.html')}`
+    isDev
+      ? 'http://localhost:3000'
+      : `file://${path.join(__dirname, '../../build/index.html')}`
   );
+  
 
   // Open DevTools in development
   if (isDev) {

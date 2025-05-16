@@ -1,3 +1,4 @@
+// components/organisms/Header/Header.module.scss - Updated styles
 // Header cover layout
 .header_cover {
     display: flex;
@@ -28,8 +29,11 @@
         }
     }
 
-    .header_button {
+    .header_actions {
         flex-shrink: 0;
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
         padding-right: 20px;
     }
 }
@@ -55,4 +59,31 @@
     max-height: 90vh;
     display: flex;
     flex-direction: column;
+}
+
+// Responsive design
+@media (max-width: 768px) {
+    .header_cover {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 8px;
+
+        .header_title {
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        .header_searchBar {
+            order: 3;
+            width: 100%;
+            margin: 0;
+            max-width: none;
+        }
+
+        .header_actions {
+            padding-right: 10px;
+            gap: 0.5rem;
+        }
+    }
 }

@@ -1,15 +1,17 @@
+// components/organisms/Header/Header.jsx - Updated with data directory settings
 import React, { useState, useEffect } from 'react'
 import styles from './Header.module.scss'
 import { SearchBar } from '../../molecules'
-import { BadgePlus } from 'lucide-react'
+import { BadgePlus, FolderOpen } from 'lucide-react'
 import { Button } from '../../atoms'
 import NotebookForm from '../NoteBookForm/NoteBookForm'
+import DataDirectorySettings from '../DataDirectorySettings/DataDirectorySettings'
 
 const Header = () => {
   const [showForm, setShowForm] = useState(false);
+  const [showDataSettings, setShowDataSettings] = useState(false);
 
   const handleCreateNotebook = () => {
-
     // Clear any potential event listeners by forcing a reflow
     setTimeout(() => {
       setShowForm(true);
@@ -29,6 +31,14 @@ const Header = () => {
     }, 100);
   };
 
+  const handleDataSettings = () => {
+    setShowDataSettings(true);
+  };
+
+  const handleCloseDataSettings = () => {
+    setShowDataSettings(false);
+  };
+
   return (
     <>
       <div className={styles.header_cover}>
@@ -40,8 +50,17 @@ const Header = () => {
           <SearchBar />
         </div>
 
-        <div className={styles.header_button}>
-          <Button Icon={BadgePlus} label={"New Notebook"} onClick={handleCreateNotebook} />
+        <div className={styles.header_actions}>
+          <Button 
+            Icon={FolderOpen} 
+            label={"Data Directory"} 
+            onClick={handleDataSettings}
+          />
+          <Button 
+            Icon={BadgePlus} 
+            label={"New Notebook"} 
+            onClick={handleCreateNotebook} 
+          />
         </div>
       </div>
 
@@ -50,6 +69,13 @@ const Header = () => {
         <NotebookForm 
           key={`form-${Date.now()}`} 
           onClose={handleCloseForm} 
+        />
+      )}
+
+      {/* Data Directory Settings Modal */}
+      {showDataSettings && (
+        <DataDirectorySettings 
+          onClose={handleCloseDataSettings} 
         />
       )}
     </>

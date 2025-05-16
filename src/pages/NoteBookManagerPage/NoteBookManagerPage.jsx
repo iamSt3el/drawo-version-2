@@ -44,10 +44,6 @@ const NoteBookManagerPage = () => {
         )}
       </div>
       
-      {/* This button is for testing - you can remove it */}
-      <button onClick={handleClick} className={styles.test_button} title="Go to Sample Notebook">
-        →
-      </button>
     </div>
   )
 }

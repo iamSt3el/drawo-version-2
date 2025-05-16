@@ -394,12 +394,12 @@ const NoteBookInteriorPage = () => {
                     {isSaving ? 'Saving...' : 'Auto-save enabled'}
                 </div>
 
-                {/* Export buttons */}
+                {/* Export buttons
                 <div className={styles.export_buttons}>
                     <button onClick={handleExportSVG} title="Export as SVG (Ctrl+E)">SVG</button>
                     <button onClick={handleExportImage} title="Export as PNG (Ctrl+I)">PNG</button>
                     <button onClick={handleManualSave} title="Manual Save (Ctrl+S)">Save</button>
-                </div>
+                </div> */}
             </div>
 
             <div className={styles.notebook_interior_ui}>
@@ -420,28 +420,9 @@ const NoteBookInteriorPage = () => {
                         setPatternOpacity={(opacity) => handlePageSettingChange('patternOpacity', opacity)}
                     />
 
-                    <button
-                        className={styles.panel_toggle}
-                        onClick={() => setIsPagePanelVisible(!isPagePanelVisible)}
-                        title={isPagePanelVisible ? "Hide page settings" : "Show page settings"}
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPagePanelVisible ? '' : styles.rotate}>
-                            <path d="m15 18-6-6 6-6" />
-                        </svg>
-                    </button>
                 </div>
 
-                {/* Left page navigation */}
-                <div className={`${styles.page_navigation} ${styles.left}`}>
-                    <button
-                        onClick={handlePreviousPage}
-                        disabled={currentPageNumber <= 1 || isSaving}
-                        className={styles.nav_button}
-                        title="Previous page (Ctrl+←)"
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
-                </div>
+            
 
                 <div className={styles.notebook_interior_canvas}>
                     <NoteBookUi
@@ -460,18 +441,7 @@ const NoteBookInteriorPage = () => {
                     />
                 </div>
 
-                {/* Right page navigation */}
-                <div className={`${styles.page_navigation} ${styles.right}`}>
-                    <button
-                        onClick={handleNextPage}
-                        disabled={currentPageNumber >= totalPages || isSaving}
-                        className={styles.nav_button}
-                        title="Next page (Ctrl+→)"
-                    >
-                        <ChevronRight size={24} />
-                    </button>
-                </div>
-
+          
                 {/* Pen Settings Panel (Right side) */}
                 <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden}`}>
                     <PenSettingPanel
@@ -486,15 +456,7 @@ const NoteBookInteriorPage = () => {
                         setOpacity={setOpacity}
                     />
 
-                    <button
-                        className={styles.panel_toggle}
-                        onClick={() => setIsPenPanelVisible(!isPenPanelVisible)}
-                        title={isPenPanelVisible ? "Hide pen settings" : "Show pen settings"}
-                    >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isPenPanelVisible ? styles.rotate : ''}>
-                            <path d="m9 18 6-6-6-6" />
-                        </svg>
-                    </button>
+                    
                 </div>
             </div>
         </div>
