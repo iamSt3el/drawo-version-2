@@ -1,3 +1,4 @@
+// src/components/molecules/NoteBookCard/NoteBookCard.jsx - Fixed delete button and progress display
 import React, { useState } from 'react'
 import styles from './NoteBookCard.module.scss'
 import { useNavigate } from 'react-router-dom'
@@ -17,11 +18,19 @@ const NoteBookCard = ({ notebook }) => {
     title = "What is DSA",
     description = "This notebook contains notes about DSA. Like Array, linked list and trees.",
     date = "14/05/2025",
-    pages = 100,
-    currentPage = 0,
+    pages = [], // This is the array of page IDs
+    totalPages = 100, // This is the total pages limit
+    currentPage = 1,
     progress = 0,
     gradient = "linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)"
   } = notebook || {};
+
+  // Calculate actual progress based on current page and total pages
+  const actualProgress = totalPages ? Math.round((currentPage / totalPages) * 100) : 0;
+
+  // Determine how many pages have been created vs total allowed
+  const createdPages = Array.isArray(pages) ? pages.length : 0;
+  const totalAllowedPages = totalPages || 100;
 
   const handleCardClick = () => {
     navigate(`/notebook-interior/${id}`);
@@ -32,10 +41,15 @@ const NoteBookCard = ({ notebook }) => {
     setShowDeleteConfirm(true);
   };
 
-  const handleConfirmDelete = (e) => {
+  const handleConfirmDelete = async (e) => {
     e.stopPropagation();
-    deleteNotebook(id);
-    setShowDeleteConfirm(false);
+    try {
+      await deleteNotebook(id);
+      setShowDeleteConfirm(false);
+    } catch (error) {
+      console.error('Error deleting notebook:', error);
+      // Keep modal open on error
+    }
   };
 
   const handleCancelDelete = (e) => {
@@ -88,6 +102,7 @@ const NoteBookCard = ({ notebook }) => {
                 className={styles.delete_button}
                 onClick={handleDeleteClick}
                 title="Delete notebook"
+                aria-label={`Delete notebook ${title}`}
               >
                 <Trash2 size={16} />
               </button>
@@ -103,11 +118,11 @@ const NoteBookCard = ({ notebook }) => {
 
             <div className={styles.notebook_card_progress_content}>
               <div className={styles.page_number}>
-                <h4>Page: {currentPage}/{pages}</h4>
+                <h4>Page: {currentPage}/{totalAllowedPages}</h4>
               </div>
 
               <div className={styles.progress}>
-                <h4>{Math.round(progress)}%</h4>
+                <h4>{actualProgress}%</h4>
               </div>
             </div>
           </div>

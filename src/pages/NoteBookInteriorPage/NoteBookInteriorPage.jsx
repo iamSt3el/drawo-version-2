@@ -1,4 +1,4 @@
-// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Simple Excalidraw-style saving
+// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed navigation and page creation
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
 import { useParams } from 'react-router-dom'
@@ -18,7 +18,7 @@ const NoteBookInteriorPage = () => {
     // Use custom hook for notebook data management
     const {
         notebook,
-        pages,  // Add this line - it was missing
+        pages,
         currentPageNumber,
         currentPageData,
         loading,
@@ -26,7 +26,8 @@ const NoteBookInteriorPage = () => {
         saveCurrentPage,
         navigateToPage,
         nextPage,
-        previousPage
+        previousPage,
+        totalPages // This now correctly returns the total pages limit
     } = useNotebookData(id);
 
     // Canvas state
@@ -46,6 +47,7 @@ const NoteBookInteriorPage = () => {
     const { debouncedSave, saveNow } = useCanvasAutoSave(async (vectorData) => {
         setIsSaving(true);
         try {
+            console.log('Auto-save triggered for page:', currentPageNumber);
             await saveCurrentPage(vectorData);
         } catch (error) {
             console.error('Error saving page:', error);
@@ -66,6 +68,20 @@ const NoteBookInteriorPage = () => {
         }
     }, [currentPageData?.settings, updatePageSettings]);
 
+    // Force canvas reload when currentPageData changes (page navigation)
+    useEffect(() => {
+        if (notebookUiRef.current && currentPageData) {
+            console.log(`Loading page ${currentPageNumber} data:`, currentPageData.canvasData?.length || 0, 'characters');
+            // Only load if there's actual canvas data and it's a different page
+            if (currentPageData.canvasData) {
+                notebookUiRef.current.loadCanvasData(currentPageData.canvasData);
+            } else {
+                // Clear canvas for new empty pages
+                notebookUiRef.current.clearCanvas();
+            }
+        }
+    }, [currentPageData, currentPageNumber]);
+
     const handleToolChange = (tool) => {
         setCurrentTool(tool);
         setIsPenPanelVisible(tool === 'pen');
@@ -85,8 +101,9 @@ const NoteBookInteriorPage = () => {
 
     // Simple canvas change handler - trigger debounced save on every change
     const handleCanvasChange = useCallback((vectorData) => {
+        console.log('Canvas change detected for page:', currentPageNumber);
         debouncedSave(vectorData);
-    }, [debouncedSave]);
+    }, [debouncedSave, currentPageNumber]);
 
     const handleClearCanvas = async () => {
         if (notebookUiRef.current) {
@@ -103,11 +120,20 @@ const NoteBookInteriorPage = () => {
     };
 
     const handlePageSettingChange = useCallback((settingName, value) => {
+        console.log('Page setting changed:', settingName, value);
         const newSettings = { ...pageSettings, [settingName]: value };
         updatePageSettings(newSettings);
-    }, [pageSettings, updatePageSettings]);
+        
+        // Also save the settings to the current page immediately
+        if (currentPageData && notebookUiRef.current) {
+            const vectorData = notebookUiRef.current.exportJSON();
+            setTimeout(() => {
+                saveNow(vectorData);
+            }, 100);
+        }
+    }, [pageSettings, updatePageSettings, currentPageData, saveNow]);
 
-    // Simple navigation handlers
+    // Fixed navigation handlers
     const handlePreviousPage = async () => {
         if (currentPageNumber > 1) {
             // Save current page before navigating
@@ -115,27 +141,19 @@ const NoteBookInteriorPage = () => {
                 const vectorData = notebookUiRef.current.exportJSON();
                 await saveNow(vectorData);
             }
-            await navigateToPage(currentPageNumber - 1);
+            await previousPage();
         }
     };
 
     const handleNextPage = async () => {
-        console.log(notebook.pages)
-        if (notebook && currentPageNumber < notebook.pages) {
-            // Save current page before navigating
-            if (notebookUiRef.current) {
-                const vectorData = notebookUiRef.current.exportJSON();
-                await saveNow(vectorData);
-            }
-            await navigateToPage(currentPageNumber + 1);
-        }
-
+        // Save current page before navigating
         if (notebookUiRef.current) {
             const vectorData = notebookUiRef.current.exportJSON();
             await saveNow(vectorData);
         }
-        await navigateToPage(currentPageNumber + 1);
-
+        
+        // Use the nextPage function which handles the logic correctly
+        await nextPage();
     };
 
     // Manual save function
@@ -246,9 +264,9 @@ const NoteBookInteriorPage = () => {
                     setIsPen={setIsPen}
                 />
 
-                {/* Page Info in Toolbar */}
+                {/* Page Info in Toolbar - Fixed to show correct total pages */}
                 <div className={styles.page_info}>
-                    <span>Page {currentPageNumber} of {notebook.pages}</span>
+                    <span>Page {currentPageNumber} of {totalPages}</span>
                 </div>
 
                 {/* Save Status */}
@@ -317,15 +335,16 @@ const NoteBookInteriorPage = () => {
                         patternColor={pageSettings.patternColor}
                         patternOpacity={pageSettings.patternOpacity}
                         onCanvasChange={handleCanvasChange}
+                        key={`page-${currentPageNumber}`} // Force re-render when page changes
                         initialCanvasData={currentPageData?.canvasData}
                     />
                 </div>
 
-                {/* Right page navigation */}
+                {/* Right page navigation - Fixed condition */}
                 <div className={`${styles.page_navigation} ${styles.right}`}>
                     <button
                         onClick={handleNextPage}
-                        disabled={currentPageNumber >= notebook.pages || isSaving}
+                        disabled={currentPageNumber >= totalPages || isSaving}
                         className={styles.nav_button}
                         title="Next page"
                     >

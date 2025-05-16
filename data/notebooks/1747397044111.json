@@ -1,0 +1,18 @@
+{
+  "id": 1747397044111,
+  "title": "DSA",
+  "description": "HELLO",
+  "color": "#ec4899",
+  "pages": [
+    "1747397044111_page_1",
+    "1747397044111_page_2",
+    "1747397044111_page_3"
+  ],
+  "date": "16/05/2025",
+  "gradient": "linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)",
+  "currentPage": 2,
+  "progress": 2,
+  "createdAt": "2025-05-16T12:04:04.111Z",
+  "lastModified": "2025-05-16T12:04:48.922Z",
+  "totalPages": 100
+}

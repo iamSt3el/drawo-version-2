@@ -1,4 +1,4 @@
-// contexts/NotebookContextWithFS.jsx - Fixed version with proper filter logic
+// contexts/NotebookContextWithFS.jsx - Fixed progress calculation and page tracking
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 
 // For Electron integration
@@ -132,82 +132,89 @@ export const NotebookProvider = ({ children }) => {
   };
 
   // Add a new notebook
-const addNotebook = async (notebookData) => {
-  try {
-    const colorGradients = {
-      '#8b5cf6': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
-      '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-      '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
-      '#10b981': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-      '#3b82f6': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-      '#ec4899': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
-      '#14b8a6': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
-      '#f97316': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)'
-    };
-
-    const notebookId = Date.now();
-    const newNotebook = {
-      id: notebookId,
-      ...notebookData,
-      gradient: colorGradients[notebookData.color] || colorGradients['#8b5cf6'],
-      currentPage: 1, // Changed from 0 to 1
-      progress: 0,
-      pages: [], // This will store the page IDs, not the count
-      createdAt: new Date().toISOString()
-    };
-
-    // Save the notebook first
-    const savedNotebook = await saveNotebook(newNotebook);
-    
-    // Create the first page immediately
-    const firstPageData = {
-      notebookId: notebookId,
-      pageNumber: 1,
-      canvasData: JSON.stringify({
-        type: 'drawing',
-        version: 1,
-        elements: [],
-        appState: {
-          width: 870,
-          height: 870
-        }
-      }),
-      settings: pageSettings
-    };
-
+  const addNotebook = async (notebookData) => {
     try {
-      // Save the first page
-      const savedPage = await savePage(firstPageData);
-      
-      // Update the notebook with the page reference
-      const updatedNotebook = {
-        ...savedNotebook,
-        pages: [savedPage.id],
-        currentPage: 1,
-        totalPages: notebookData.pages // Store the original pages count as totalPages
+      const colorGradients = {
+        '#8b5cf6': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
+        '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+        '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
+        '#10b981': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+        '#3b82f6': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+        '#ec4899': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
+        '#14b8a6': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
+        '#f97316': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)'
       };
-      
-      await saveNotebook(updatedNotebook);
-      await loadNotebooks(); // Reload to get updated list
-      return updatedNotebook;
-    } catch (pageError) {
-      console.error('Error creating first page:', pageError);
-      // Still return the notebook even if page creation fails
-      await loadNotebooks();
-      return savedNotebook;
-    }
-  } catch (error) {
-    console.error('Error adding notebook:', error);
-    throw error;
-  }
-};
 
-  // Update a notebook
+      const notebookId = Date.now();
+      const newNotebook = {
+        id: notebookId,
+        ...notebookData,
+        gradient: colorGradients[notebookData.color] || colorGradients['#8b5cf6'],
+        currentPage: 1,
+        progress: 0,
+        pages: [], // This will store the page IDs
+        totalPages: notebookData.pages, // Store the original pages count as totalPages
+        createdAt: new Date().toISOString()
+      };
+
+      // Save the notebook first
+      const savedNotebook = await saveNotebook(newNotebook);
+      
+      // Create the first page immediately
+      const firstPageData = {
+        notebookId: notebookId,
+        pageNumber: 1,
+        canvasData: JSON.stringify({
+          type: 'drawing',
+          version: 1,
+          elements: [],
+          appState: {
+            width: 870,
+            height: 870
+          }
+        }),
+        settings: pageSettings
+      };
+
+      try {
+        // Save the first page
+        const savedPage = await savePage(firstPageData);
+        
+        // Update the notebook with the page reference
+        const updatedNotebook = {
+          ...savedNotebook,
+          pages: [savedPage.id],
+          currentPage: 1,
+          progress: Math.round((1 / savedNotebook.totalPages) * 100) // Calculate progress based on totalPages
+        };
+        
+        await saveNotebook(updatedNotebook);
+        await loadNotebooks(); // Reload to get updated list
+        return updatedNotebook;
+      } catch (pageError) {
+        console.error('Error creating first page:', pageError);
+        // Still return the notebook even if page creation fails
+        await loadNotebooks();
+        return savedNotebook;
+      }
+    } catch (error) {
+      console.error('Error adding notebook:', error);
+      throw error;
+    }
+  };
+
+  // Update a notebook with proper progress calculation
   const updateNotebook = async (id, updates) => {
     try {
       const notebook = notebooks.find(nb => nb.id === id);
       if (!notebook) {
         throw new Error('Notebook not found');
+      }
+
+      // If updating currentPage, also update progress
+      if (updates.currentPage !== undefined) {
+        const totalPages = notebook.totalPages || updates.totalPages || 100;
+        updates.progress = Math.round((updates.currentPage / totalPages) * 100);
       }
 
       const updatedNotebook = { ...notebook, ...updates };
@@ -240,7 +247,7 @@ const addNotebook = async (notebookData) => {
     }
   };
 
-  // Save a page
+  // Save a page with proper notebook updates
   const savePage = async (pageData) => {
     try {
       if (isElectron) {
@@ -252,6 +259,18 @@ const addNotebook = async (notebookData) => {
           throw new Error(result.error);
         }
         setCurrentPage(result.page);
+        
+        // Update the notebook's current page and progress
+        if (currentNotebook && pageData.pageNumber) {
+          const totalPages = currentNotebook.totalPages || 100;
+          const progress = Math.round((pageData.pageNumber / totalPages) * 100);
+          
+          await updateNotebook(currentNotebook.id, {
+            currentPage: pageData.pageNumber,
+            progress: progress
+          });
+        }
+        
         return result.page;
       } else {
         // For web version, store in localStorage with notebook
@@ -277,6 +296,19 @@ const addNotebook = async (notebookData) => {
         
         localStorage.setItem(pagesKey, JSON.stringify(existingPages));
         setCurrentPage(page);
+        
+        // Update notebook's current page and progress for web version too
+        const notebook = notebooks.find(nb => nb.id === notebookId);
+        if (notebook && pageData.pageNumber) {
+          const totalPages = notebook.totalPages || 100;
+          const progress = Math.round((pageData.pageNumber / totalPages) * 100);
+          
+          await updateNotebook(notebookId, {
+            currentPage: pageData.pageNumber,
+            progress: progress
+          });
+        }
+        
         return page;
       }
     } catch (error) {
@@ -292,6 +324,7 @@ const addNotebook = async (notebookData) => {
         const result = await ipcRenderer.invoke('data-load-page', pageId);
         if (result.success) {
           setCurrentPage(result.page);
+          console.log('Loaded page with settings:', result.page.settings);
           if (result.page.settings) {
             // Use callback to prevent infinite loops
             setPageSettings(prev => {
@@ -315,6 +348,7 @@ const addNotebook = async (notebookData) => {
         
         if (page) {
           setCurrentPage(page);
+          console.log('Loaded page from localStorage with settings:', page.settings);
           if (page.settings) {
             // Use callback to prevent infinite loops
             setPageSettings(prev => {
@@ -444,8 +478,6 @@ const addNotebook = async (notebookData) => {
       return { success: false, error: 'Storage stats not available in web version' };
     }
   };
-
-  
 
   const value = {
     // Data

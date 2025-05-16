@@ -1,4 +1,4 @@
-// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Simple Excalidraw-style saving
+// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Fixed page settings application
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import styles from './NoteBookUi.module.scss'
 import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
@@ -19,6 +19,8 @@ const NoteBookUi = forwardRef(({
   const [numberOfHoles, setNumberOfHoles] = useState(25);
   const [canvasSize, setCanvasSize] = useState({ width: 870, height: 870 });
   const lastSavedVersionRef = useRef(null);
+  const isLoadingRef = useRef(false);
+  const initialLoadCompleteRef = useRef(false);
 
   useEffect(() => {
     const updateSizeAndHoles = () => {
@@ -38,12 +40,10 @@ const NoteBookUi = forwardRef(({
     return () => window.removeEventListener('resize', updateSizeAndHoles);
   }, []);
 
-  // Simple loading - load the data when it changes
+  // Fixed loading - prevent save during initial load and handle page changes
   useEffect(() => {
- ;
-    
     if (canvasRef.current && initialCanvasData !== null) {
-    
+      isLoadingRef.current = true;
       
       // Check if there's actual content to load
       if (initialCanvasData && initialCanvasData !== '""' && initialCanvasData !== '{}') {
@@ -53,20 +53,39 @@ const NoteBookUi = forwardRef(({
             ? JSON.parse(initialCanvasData) 
             : initialCanvasData;
           
- 
-          
           if (parsed && parsed.elements && parsed.elements.length > 0) {
-     
+            console.log('Loading canvas data with', parsed.elements.length, 'elements');
             canvasRef.current.loadDrawingData(initialCanvasData);
-          } 
+            // Set the last saved version to prevent immediate save
+            lastSavedVersionRef.current = initialCanvasData;
+          } else {
+            // Clear canvas for empty page data
+            console.log('Loading empty page - clearing canvas');
+            canvasRef.current.clearCanvas();
+            lastSavedVersionRef.current = initialCanvasData;
+          }
         } catch (error) {
           console.error('Error parsing canvas data:', error);
+          // If parsing fails, clear the canvas
+          canvasRef.current.clearCanvas();
         }
-      } 
+      } else {
+        // No canvas data or empty - clear the canvas
+        console.log('No canvas data - clearing canvas');
+        canvasRef.current.clearCanvas();
+        lastSavedVersionRef.current = null;
+      }
+      
+      // Mark loading as complete after a short delay
+      setTimeout(() => {
+        isLoadingRef.current = false;
+        initialLoadCompleteRef.current = true;
+        console.log('Canvas load complete');
+      }, 100);
     }
   }, [initialCanvasData]);
 
-  // Generate background pattern styles
+  // Generate background pattern styles - fixed to use current props
   const generateBackgroundPattern = () => {
     const size = patternSize;
     const getPatternColorWithOpacity = (color, opacity) => {
@@ -78,6 +97,8 @@ const NoteBookUi = forwardRef(({
     };
 
     const patternColorWithOpacity = getPatternColorWithOpacity(patternColor, patternOpacity);
+    
+    console.log('Generating pattern:', { pattern, patternSize, patternColor, patternOpacity });
     
     switch (pattern) {
       case 'grid':
@@ -114,27 +135,47 @@ const NoteBookUi = forwardRef(({
     }
   };
 
-  // Simple canvas change handler - Excalidraw style
+  // Fixed canvas change handler - prevent save during loading
   const handleCanvasChange = (vectorData) => {
     if (!onCanvasChange) return;
     
-    // Simple version check - only save if data actually changed
+    // Don't save during initial loading
+    if (isLoadingRef.current) {
+      console.log('Skipping save - still loading');
+      return;
+    }
+
+    // Don't save if initial load hasn't completed
+    if (!initialLoadCompleteRef.current) {
+      console.log('Skipping save - initial load not complete');
+      return;
+    }
+    
+    // String comparison to detect actual changes
     const currentVersion = vectorData ? JSON.stringify(vectorData) : null;
     
     if (currentVersion !== lastSavedVersionRef.current) {
       lastSavedVersionRef.current = currentVersion;
-      console.log('Canvas changed, saving...');
+      console.log('Canvas changed, triggering save...');
       onCanvasChange(vectorData);
+    } else {
+      console.log('Skipping save - no change detected');
     }
   };
 
+  // Generate background style every render to capture prop changes
   const backgroundStyle = generateBackgroundPattern();
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     clearCanvas: () => {
       if (canvasRef.current) {
+        // Don't trigger save during programmatic clear
+        isLoadingRef.current = true;
         canvasRef.current.clearCanvas();
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 50);
       }
     },
     undo: () => {
@@ -163,12 +204,22 @@ const NoteBookUi = forwardRef(({
     },
     loadCanvasData: (vectorData) => {
       if (canvasRef.current && vectorData) {
+        isLoadingRef.current = true;
         canvasRef.current.loadDrawingData(vectorData);
+        lastSavedVersionRef.current = vectorData;
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 100);
       }
     },
     loadDrawingData: (vectorData) => {
       if (canvasRef.current && vectorData) {
+        isLoadingRef.current = true;
         canvasRef.current.loadDrawingData(vectorData);
+        lastSavedVersionRef.current = vectorData;
+        setTimeout(() => {
+          isLoadingRef.current = false;
+        }, 100);
       }
     },
     canvasRef: canvasRef.current
