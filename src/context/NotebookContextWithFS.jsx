@@ -132,37 +132,75 @@ export const NotebookProvider = ({ children }) => {
   };
 
   // Add a new notebook
-  const addNotebook = async (notebookData) => {
+const addNotebook = async (notebookData) => {
+  try {
+    const colorGradients = {
+      '#8b5cf6': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
+      '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
+      '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
+      '#10b981': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
+      '#3b82f6': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
+      '#ec4899': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
+      '#14b8a6': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
+      '#f97316': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)'
+    };
+
+    const notebookId = Date.now();
+    const newNotebook = {
+      id: notebookId,
+      ...notebookData,
+      gradient: colorGradients[notebookData.color] || colorGradients['#8b5cf6'],
+      currentPage: 1, // Changed from 0 to 1
+      progress: 0,
+      pages: [], // This will store the page IDs, not the count
+      createdAt: new Date().toISOString()
+    };
+
+    // Save the notebook first
+    const savedNotebook = await saveNotebook(newNotebook);
+    
+    // Create the first page immediately
+    const firstPageData = {
+      notebookId: notebookId,
+      pageNumber: 1,
+      canvasData: JSON.stringify({
+        type: 'drawing',
+        version: 1,
+        elements: [],
+        appState: {
+          width: 870,
+          height: 870
+        }
+      }),
+      settings: pageSettings
+    };
+
     try {
-      const colorGradients = {
-        '#8b5cf6': 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
-        '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #dc2626 50%, #b91c1c 100%)',
-        '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%)',
-        '#10b981': 'linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%)',
-        '#3b82f6': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%)',
-        '#ec4899': 'linear-gradient(135deg, #ec4899 0%, #db2777 50%, #be185d 100%)',
-        '#14b8a6': 'linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%)',
-        '#f97316': 'linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%)'
+      // Save the first page
+      const savedPage = await savePage(firstPageData);
+      
+      // Update the notebook with the page reference
+      const updatedNotebook = {
+        ...savedNotebook,
+        pages: [savedPage.id],
+        currentPage: 1,
+        totalPages: notebookData.pages // Store the original pages count as totalPages
       };
-
-      const newNotebook = {
-        id: Date.now(),
-        ...notebookData,
-        gradient: colorGradients[notebookData.color] || colorGradients['#8b5cf6'],
-        currentPage: 0,
-        progress: 0,
-        pages: [],
-        createdAt: new Date().toISOString()
-      };
-
-      const savedNotebook = await saveNotebook(newNotebook);
+      
+      await saveNotebook(updatedNotebook);
       await loadNotebooks(); // Reload to get updated list
+      return updatedNotebook;
+    } catch (pageError) {
+      console.error('Error creating first page:', pageError);
+      // Still return the notebook even if page creation fails
+      await loadNotebooks();
       return savedNotebook;
-    } catch (error) {
-      console.error('Error adding notebook:', error);
-      throw error;
     }
-  };
+  } catch (error) {
+    console.error('Error adding notebook:', error);
+    throw error;
+  }
+};
 
   // Update a notebook
   const updateNotebook = async (id, updates) => {
@@ -406,6 +444,8 @@ export const NotebookProvider = ({ children }) => {
       return { success: false, error: 'Storage stats not available in web version' };
     }
   };
+
+  
 
   const value = {
     // Data

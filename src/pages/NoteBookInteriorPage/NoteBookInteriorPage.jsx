@@ -120,6 +120,7 @@ const NoteBookInteriorPage = () => {
     };
 
     const handleNextPage = async () => {
+        console.log(notebook.pages)
         if (notebook && currentPageNumber < notebook.pages) {
             // Save current page before navigating
             if (notebookUiRef.current) {
@@ -128,6 +129,13 @@ const NoteBookInteriorPage = () => {
             }
             await navigateToPage(currentPageNumber + 1);
         }
+
+        if (notebookUiRef.current) {
+            const vectorData = notebookUiRef.current.exportJSON();
+            await saveNow(vectorData);
+        }
+        await navigateToPage(currentPageNumber + 1);
+
     };
 
     // Manual save function

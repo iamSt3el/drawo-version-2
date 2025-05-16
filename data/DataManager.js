@@ -28,21 +28,22 @@ class DataManager {
   // NOTEBOOK FUNCTIONS
   
   // Save a notebook
-  async saveNotebook(notebook) {
-    try {
-      const filePath = path.join(this.notebooksDir, `${notebook.id}.json`);
-      const notebookData = {
-        ...notebook,
-        lastModified: new Date().toISOString(),
-        pages: notebook.pages || [] // Array of page IDs
-      };
-      await fs.writeFile(filePath, JSON.stringify(notebookData, null, 2));
-      return { success: true, notebook: notebookData };
-    } catch (error) {
-      console.error('Error saving notebook:', error);
-      return { success: false, error: error.message };
-    }
+async saveNotebook(notebook) {
+  try {
+    const filePath = path.join(this.notebooksDir, `${notebook.id}.json`);
+    const notebookData = {
+      ...notebook,
+      lastModified: new Date().toISOString(),
+      pages: notebook.pages || [], // Array of page IDs
+      totalPages: notebook.totalPages || notebook.pages || 100 // Store the pages limit
+    };
+    await fs.writeFile(filePath, JSON.stringify(notebookData, null, 2));
+    return { success: true, notebook: notebookData };
+  } catch (error) {
+    console.error('Error saving notebook:', error);
+    return { success: false, error: error.message };
   }
+}
 
   // Load a notebook by ID
   async loadNotebook(notebookId) {
