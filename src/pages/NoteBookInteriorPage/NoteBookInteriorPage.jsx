@@ -1,4 +1,4 @@
-// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Fixed to properly handle page data loading
+// pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx - Simple Fix Version
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import styles from './NoteBookInteriorPage.module.scss'
 import { useParams } from 'react-router-dom'
@@ -384,7 +384,7 @@ const NoteBookInteriorPage = () => {
                     handlePreviousPage={handlePreviousPage}
                 />
 
-                {/* Page Info in Toolbar */}
+                {/* Page Info in Toolbar - HIDDEN (moved to floating) */}
                 <div className={styles.page_info}>
                     <span>Page {currentPageNumber} of {totalPages}</span>
                 </div>
@@ -393,13 +393,6 @@ const NoteBookInteriorPage = () => {
                 <div className={`${styles.save_status} ${isSaving ? styles.saving : ''}`}>
                     {isSaving ? 'Saving...' : 'Auto-save enabled'}
                 </div>
-
-                {/* Export buttons
-                <div className={styles.export_buttons}>
-                    <button onClick={handleExportSVG} title="Export as SVG (Ctrl+E)">SVG</button>
-                    <button onClick={handleExportImage} title="Export as PNG (Ctrl+I)">PNG</button>
-                    <button onClick={handleManualSave} title="Manual Save (Ctrl+S)">Save</button>
-                </div> */}
             </div>
 
             <div className={styles.notebook_interior_ui}>
@@ -419,10 +412,7 @@ const NoteBookInteriorPage = () => {
                         setPatternColor={(color) => handlePageSettingChange('patternColor', color)}
                         setPatternOpacity={(opacity) => handlePageSettingChange('patternOpacity', opacity)}
                     />
-
                 </div>
-
-            
 
                 <div className={styles.notebook_interior_canvas}>
                     <NoteBookUi
@@ -441,7 +431,6 @@ const NoteBookInteriorPage = () => {
                     />
                 </div>
 
-          
                 {/* Pen Settings Panel (Right side) */}
                 <div className={`${styles.notebook_interior_pen_setting_panel} ${isPenPanelVisible && isPen ? styles.visible : styles.hidden}`}>
                     <PenSettingPanel
@@ -455,8 +444,29 @@ const NoteBookInteriorPage = () => {
                         setColor={setStrokeColor}
                         setOpacity={setOpacity}
                     />
+                </div>
+            </div>
 
-                    
+            {/* NEW: Floating Page Info with Navigation (bottom-right) */}
+            <div className={styles.page_info_floating}>
+                <span>Page {currentPageNumber} of {totalPages}</span>
+                <div className={styles.nav_buttons}>
+                    <button
+                        className={styles.nav_button}
+                        onClick={handlePreviousPage}
+                        disabled={currentPageNumber <= 1}
+                        title="Previous Page (Ctrl + ←)"
+                    >
+                        <ChevronLeft />
+                    </button>
+                    <button
+                        className={styles.nav_button}
+                        onClick={handleNextPage}
+                        disabled={currentPageNumber >= totalPages}
+                        title="Next Page (Ctrl + →)"
+                    >
+                        <ChevronRight />
+                    </button>
                 </div>
             </div>
         </div>

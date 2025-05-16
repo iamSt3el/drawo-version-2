@@ -70,10 +70,6 @@ const ToolBar = ({ onToolChange, onClearCanvas, onUndo, setIsPen, handlePrevious
           />
         </div>
 
-        <div className={styles.navigation_tools}>
-          <Button Icon={MoveLeft} label={'Previous Page (ctrl + ->)'} onClick={handlePreviousPage}/>
-          <Button Icon={MoveRight} label={'Next Page (ctrl + <-'} onClick={handleNextPage}/>
-        </div>
       </div>
     </div>
   );
