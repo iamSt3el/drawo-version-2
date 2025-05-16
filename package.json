@@ -18,8 +18,8 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "electron-dev": "concurrently \"BROWSER=none yarn start\" \"wait-on http://localhost:3000 && ELECTRON_OZONE_PLATFORM_HINT=x11 electron .\"",
-    "electron-pack": "build -c.extraMetadata.main=build/electron.js -mlw",
-    "preelectron-pack": "yarn build"
+    "electron-pack": "electron-builder -c.extraMetadata.main=build/electron.js -l",
+    "preelectron-pack": "yarn build && cp public/electron.js build/ && cp public/electron-data-handler.js build/ && cp -r data build/"
   },
   "eslintConfig": {
     "extends": [
@@ -43,16 +43,10 @@
     "concurrently": "^9.1.2",
     "electron": "^36.2.0",
     "electron-builder": "^26.0.12",
-    "electron-is-dev": "^3.0.1",
-    "fabric": "^6.6.5",
-    "fabricjs": "^1.0.0",
-    "fs": "^0.0.1-security",
     "lucide-react": "^0.510.0",
-    "path": "^0.12.7",
     "perfect-freehand": "^1.2.2",
     "react-router-dom": "^7.6.0",
     "sass": "^1.88.0",
-    "tldraw": "^3.12.2",
     "wait-on": "^8.0.3"
   },
   "main": "public/electron.js",

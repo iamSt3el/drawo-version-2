@@ -5,8 +5,7 @@ const BrowserWindow = electron.BrowserWindow;
 
 const path = require('path');
 const url = require('url');
-const isDev = require('electron-is-dev');
-
+const isDev = process.env.NODE_ENV === 'development' || /electron(.exe)?$/.test(process.execPath);
 // Import the data handler
 const ElectronDataHandler = require('./electron-data-handler');
 
