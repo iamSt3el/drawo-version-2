@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/core/CanvasEngine.js - Simple Excalidraw-style engine
+// src/components/SmoothCanvas/core/CanvasEngine.js - Enhanced for simpler shape drawing
 export class CanvasEngine {
   constructor(canvasRef, svgRef, options = {}) {
     this.canvasRef = canvasRef;
@@ -118,24 +118,51 @@ export class CanvasEngine {
   }
 
   calculateBoundingBox(pathData) {
-    const coords = pathData.match(/(-?\d+(?:\.\d+)?)/g);
-    if (!coords || coords.length < 4) return null;
-
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    
-    for (let i = 0; i < coords.length - 1; i += 2) {
-      const x = parseFloat(coords[i]);
-      const y = parseFloat(coords[i + 1]);
+    // For path data strings
+    if (typeof pathData === 'string') {
+      const coords = pathData.match(/(-?\d+(?:\.\d+)?)/g);
+      if (!coords || coords.length < 4) return null;
+  
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       
-      if (!isNaN(x) && !isNaN(y)) {
-        minX = Math.min(minX, x);
-        minY = Math.min(minY, y);
-        maxX = Math.max(maxX, x);
-        maxY = Math.max(maxY, y);
+      for (let i = 0; i < coords.length - 1; i += 2) {
+        const x = parseFloat(coords[i]);
+        const y = parseFloat(coords[i + 1]);
+        
+        if (!isNaN(x) && !isNaN(y)) {
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+      }
+      
+      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    }
+    // For shape objects
+    else if (typeof pathData === 'object') {
+      const shape = pathData;
+      
+      // Different calculations based on shape type
+      if (shape.type === 'line') {
+        const x = Math.min(shape.x1, shape.x2);
+        const y = Math.min(shape.y1, shape.y2);
+        const width = Math.abs(shape.x2 - shape.x1);
+        const height = Math.abs(shape.y2 - shape.y1);
+        return { x, y, width, height };
+      }
+      else {
+        // For rectangle, circle, triangle, etc.
+        return { 
+          x: shape.x, 
+          y: shape.y, 
+          width: shape.width, 
+          height: shape.height 
+        };
       }
     }
-
-    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    
+    return null;
   }
 
   eraserIntersectsBoundingBox(eraserX, eraserY, eraserRadius, bbox) {
@@ -163,6 +190,7 @@ export class CanvasEngine {
     return `path-${Date.now()}-${this.nextPathId++}`;
   }
 
+  // Add a path for drawing strokes
   addPath(pathData, color, strokeWidth, inputType, inputPoints = []) {
     const newPath = {
       id: this.generatePathId(),
@@ -184,6 +212,48 @@ export class CanvasEngine {
     return newPath;
   }
 
+  // Add a shape with simplified approach
+  addShape(shapeData) {
+    const { type, x, y, width, height, color, strokeWidth, opacity, fill, fillColor, fillOpacity } = shapeData;
+    
+    // Generate a unique ID for the shape
+    const id = this.generatePathId();
+    
+    // Create a consistent shape object
+    const newShape = {
+      id,
+      type: 'shape',          // Mark as shape type
+      shapeType: type,        // The specific shape type (rectangle, circle, etc.)
+      x, y, width, height,    // Position and dimensions
+      color: this.normalizeColor(color),
+      strokeWidth,
+      opacity: opacity || 100,
+      fill: !!fill,           // Convert to boolean
+      fillColor: fillColor || color,
+      fillOpacity: fillOpacity || 20,
+      timestamp: Date.now()
+    };
+    
+    // Handle special shape types like lines
+    if (type === 'line') {
+      newShape.x1 = shapeData.x1;
+      newShape.y1 = shapeData.y1;
+      newShape.x2 = shapeData.x2;
+      newShape.y2 = shapeData.y2;
+    }
+    
+    // Calculate bounding box for the shape
+    const bbox = this.calculateBoundingBox(newShape);
+    if (bbox) {
+      this.pathBBoxes.set(newShape.id, bbox);
+    }
+    
+    // Add to paths array
+    this.paths.push(newShape);
+    
+    return newShape;
+  }
+
   clearPaths() {
     this.paths = [];
     this.pathBBoxes.clear();
@@ -202,21 +272,46 @@ export class CanvasEngine {
     return true;
   }
 
-  // Export as JSON - simple format
+  // Export as JSON - simplified format for better interoperability
   exportAsJSON() {
     return JSON.stringify({
       type: 'drawing',
       version: 1,
-      elements: this.paths.map(path => ({
-        id: path.id,
-        type: path.type,
-        pathData: path.pathData,
-        color: path.color,
-        strokeWidth: path.strokeWidth,
-        inputType: path.inputType,
-        inputPoints: path.inputPoints,
-        timestamp: path.timestamp
-      })),
+      elements: this.paths.map(path => {
+        if (path.type === 'shape') {
+          return {
+            id: path.id,
+            type: 'shape',
+            shapeType: path.shapeType,
+            x: path.x,
+            y: path.y,
+            width: path.width,
+            height: path.height,
+            x1: path.x1,
+            y1: path.y1,
+            x2: path.x2,
+            y2: path.y2,
+            color: path.color,
+            strokeWidth: path.strokeWidth,
+            opacity: path.opacity,
+            fill: path.fill,
+            fillColor: path.fillColor,
+            fillOpacity: path.fillOpacity,
+            timestamp: path.timestamp
+          };
+        } else {
+          return {
+            id: path.id,
+            type: path.type,
+            pathData: path.pathData,
+            color: path.color,
+            strokeWidth: path.strokeWidth,
+            inputType: path.inputType,
+            inputPoints: path.inputPoints,
+            timestamp: path.timestamp
+          };
+        }
+      }),
       appState: {
         width: this.options.width,
         height: this.options.height
@@ -224,9 +319,8 @@ export class CanvasEngine {
     });
   }
 
-  // Simple import function
+  // Import function that handles shapes
   importFromJSON(jsonData) {
-    
     if (!jsonData) {
       return true;
     }
@@ -236,7 +330,6 @@ export class CanvasEngine {
       
       // Parse JSON if string
       if (typeof jsonData === 'string') {
-        
         // Skip empty strings and non-JSON
         if (!jsonData.trim() || !jsonData.trim().startsWith('{')) {
           return true;
@@ -263,10 +356,9 @@ export class CanvasEngine {
       this.clearPaths();
 
       // Import elements
-      data.elements.forEach((element, index) => {
-        
+      data.elements.forEach((element) => {
         if (element.type === 'stroke' && element.pathData) {
-       
+          // Create stroke object
           const newPath = {
             id: this.generatePathId(),
             pathData: element.pathData,
@@ -278,13 +370,46 @@ export class CanvasEngine {
             timestamp: element.timestamp || Date.now()
           };
 
-
           const bbox = this.calculateBoundingBox(element.pathData);
           if (bbox) {
             this.pathBBoxes.set(newPath.id, bbox);
           }
 
           this.paths.push(newPath);
+        }
+        else if (element.type === 'shape') {
+          // Create shape object
+          const newShape = {
+            id: this.generatePathId(),
+            type: 'shape',
+            shapeType: element.shapeType,
+            x: element.x,
+            y: element.y,
+            width: element.width,
+            height: element.height,
+            color: element.color || '#000000',
+            strokeWidth: element.strokeWidth || 2,
+            opacity: element.opacity || 100,
+            fill: element.fill || false,
+            fillColor: element.fillColor || element.color || '#000000',
+            fillOpacity: element.fillOpacity || 20,
+            timestamp: element.timestamp || Date.now()
+          };
+          
+          // Handle special shape types like lines
+          if (element.shapeType === 'line') {
+            newShape.x1 = element.x1;
+            newShape.y1 = element.y1;
+            newShape.x2 = element.x2;
+            newShape.y2 = element.y2;
+          }
+
+          const bbox = this.calculateBoundingBox(newShape);
+          if (bbox) {
+            this.pathBBoxes.set(newShape.id, bbox);
+          }
+
+          this.paths.push(newShape);
         }
       });
 

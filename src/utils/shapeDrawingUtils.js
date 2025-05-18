@@ -1,13 +1,11 @@
-// src/utils/shapeDrawingUtils.js
-// Complete file with all required exports
-
+// src/utils/shapeDrawingUtils.js - Simplified shape drawing utilities
 import { useRef, useState, useCallback, useEffect } from 'react';
 
 /**
  * Custom hook for managing shape drawing state and functions
  * @param {Object} options - Configuration options
  * @param {Function} options.onShapeComplete - Callback when shape is completed
- * @param {Function} options.canvasRef - Reference to the canvas component
+ * @param {Object} options.canvasRef - Reference to the canvas component
  * @param {string} options.strokeColor - Current stroke color
  * @param {number} options.strokeWidth - Current stroke width
  * @param {number} options.opacity - Current opacity
@@ -50,6 +48,12 @@ export const useShapeDrawing = ({
       // Force redraw if currently drawing a shape
       if (isDrawingShape && shapeEndPoint) {
         updateTemporaryShape(shapeStartPoint, shapeEndPoint);
+      }
+      
+      // Handle escape key to cancel drawing
+      if (e.key === 'Escape' && isDrawingShape) {
+        setIsDrawingShape(false);
+        setTemporaryShape(null);
       }
     };
     
@@ -111,51 +115,56 @@ export const useShapeDrawing = ({
     if (keyModifiersRef.current.shift) {
       // Make perfect square/circle when shift is pressed
       const size = Math.max(Math.abs(end.x - start.x), Math.abs(end.y - start.y));
-      width = size * Math.sign(end.x - start.x) || size; // Ensure non-zero
-      height = size * Math.sign(end.y - start.y) || size; // Ensure non-zero
       
-      x = start.x;
-      y = start.y;
+      // Maintain direction
+      if (end.x < start.x) {
+        x = start.x - size;
+      } else {
+        x = start.x;
+      }
+      
+      if (end.y < start.y) {
+        y = start.y - size;
+      } else {
+        y = start.y;
+      }
+      
+      width = size;
+      height = size;
     } else {
       // Normal rectangle/ellipse
-      x = Math.min(start.x, end.x);
-      y = Math.min(start.y, end.y);
-      width = Math.abs(end.x - start.x);
-      height = Math.abs(end.y - start.y);
-      
-      // Ensure correct sign when drawing backward
       if (end.x < start.x) {
-        width = -width;
+        x = end.x;
+        width = start.x - end.x;
+      } else {
+        x = start.x;
+        width = end.x - start.x;
       }
+      
       if (end.y < start.y) {
-        height = -height;
+        y = end.y;
+        height = start.y - end.y;
+      } else {
+        y = start.y;
+        height = end.y - start.y;
       }
     }
     
+    // Draw from center when alt is pressed
     if (keyModifiersRef.current.alt) {
-      // Draw from center when alt is pressed
       const centerX = start.x;
       const centerY = start.y;
       
-      // When alt is pressed, the start point becomes the center
-      if (width >= 0) {
-        x = centerX - width / 2;
-      } else {
-        x = centerX + width / 2;
-        width = -width;
-      }
+      const halfWidth = width / 2;
+      const halfHeight = height / 2;
       
-      if (height >= 0) {
-        y = centerY - height / 2;
-      } else {
-        y = centerY + height / 2;
-        height = -height;
-      }
+      x = centerX - halfWidth;
+      y = centerY - halfHeight;
     }
     
-    // Ensure minimum size for visibility
-    width = Math.max(Math.abs(width), 1);
-    height = Math.max(Math.abs(height), 1);
+    // Ensure minimum dimensions
+    width = Math.max(width, 1);
+    height = Math.max(height, 1);
     
     return { x, y, width, height };
   }, []);
@@ -219,7 +228,7 @@ export const useShapeDrawing = ({
     const shapeTools = ['rectangle', 'circle', 'ellipse', 'line', 'triangle', 'star'];
     
     if (!shapeTools.includes(currentTool)) {
-      return;
+      return; // Not a shape tool, don't handle
     }
     
     // Get coordinates relative to canvas
@@ -271,16 +280,27 @@ export const useShapeDrawing = ({
     // Update temporary shape one last time to ensure consistency
     updateTemporaryShape(shapeStartPoint, { x, y }, currentTool);
     
-    // Finalize the shape
-    const finalShape = temporaryShape;
+    // Only finalize if we've moved enough (prevents accidental dots)
+    const minDistance = 3; // Minimum distance to consider a valid shape
+    const distance = Math.sqrt(
+      Math.pow(x - shapeStartPoint.x, 2) + 
+      Math.pow(y - shapeStartPoint.y, 2)
+    );
     
-    // Add the shape to the canvas if we have a valid shape
-    if (canvasRef?.current && finalShape) {
-      canvasRef.current.addShape(finalShape);
+    if (distance >= minDistance || currentTool === 'line') {
+      // Finalize the shape
+      const finalShape = temporaryShape;
       
-      // Trigger callback for shape completion
-      if (onShapeComplete) {
-        onShapeComplete(finalShape);
+      // Add the shape to the canvas if we have a valid shape
+      if (canvasRef?.current && finalShape && canvasRef.current.addShape) {
+        canvasRef.current.addShape(finalShape);
+        
+        // Trigger callback for shape completion
+        if (onShapeComplete) {
+          onShapeComplete(finalShape);
+        }
+      } else if (canvasRef?.current && finalShape) {
+        console.warn('Canvas reference does not have addShape method');
       }
     }
     
@@ -384,102 +404,5 @@ export const getToolCursor = (tool) => {
       return 'text';
     default:
       return 'default';
-  }
-};
-
-/**
- * Get shape tool icon based on shape type
- * @param {string} shapeType - The shape type
- * @param {Object} Icons - Object containing icon components
- * @returns {Component} The icon component
- */
-export const getShapeIcon = (shapeType, Icons) => {
-  switch (shapeType) {
-    case 'rectangle':
-      return Icons.Square;
-    case 'circle':
-      return Icons.Circle;
-    case 'ellipse':
-      return Icons.Circle; // Usually the same icon as circle
-    case 'line':
-      return Icons.Minus;
-    case 'triangle':
-      return Icons.Triangle;
-    case 'star':
-      return Icons.Star;
-    default:
-      return Icons.Square; // Default
-  }
-};
-
-/**
- * Helper function to create SVG path data for various shapes
- * Used for creating SVG paths directly without Rough.js
- * @param {Object} shape - The shape data
- * @returns {string} SVG path data
- */
-export const createSvgPathForShape = (shape) => {
-  if (!shape) return '';
-  
-  let centerX, centerY, radius, radiusX, radiusY;
-  
-  switch (shape.type) {
-    case 'rectangle':
-      return `M ${shape.x} ${shape.y} h ${shape.width} v ${shape.height} h ${-shape.width} Z`;
-      
-    case 'circle':
-      centerX = shape.x + shape.width / 2;
-      centerY = shape.y + shape.height / 2;
-      radius = Math.max(shape.width, shape.height) / 2;
-      
-      // SVG circle as path
-      return `M ${centerX} ${centerY - radius} 
-              A ${radius} ${radius} 0 0 1 ${centerX + radius} ${centerY} 
-              A ${radius} ${radius} 0 0 1 ${centerX} ${centerY + radius} 
-              A ${radius} ${radius} 0 0 1 ${centerX - radius} ${centerY} 
-              A ${radius} ${radius} 0 0 1 ${centerX} ${centerY - radius} Z`;
-              
-    case 'ellipse':
-      centerX = shape.x + shape.width / 2;
-      centerY = shape.y + shape.height / 2;
-      radiusX = shape.width / 2;
-      radiusY = shape.height / 2;
-      
-      // SVG ellipse as path
-      return `M ${centerX} ${centerY - radiusY} 
-              A ${radiusX} ${radiusY} 0 0 1 ${centerX + radiusX} ${centerY} 
-              A ${radiusX} ${radiusY} 0 0 1 ${centerX} ${centerY + radiusY} 
-              A ${radiusX} ${radiusY} 0 0 1 ${centerX - radiusX} ${centerY} 
-              A ${radiusX} ${radiusY} 0 0 1 ${centerX} ${centerY - radiusY} Z`;
-              
-    case 'line':
-      return `M ${shape.x1} ${shape.y1} L ${shape.x2} ${shape.y2}`;
-      
-    case 'triangle':
-      return `M ${shape.x + shape.width / 2} ${shape.y} 
-              L ${shape.x} ${shape.y + shape.height} 
-              L ${shape.x + shape.width} ${shape.y + shape.height} 
-              Z`;
-              
-    case 'star':
-      // Create a 5-point star
-      centerX = shape.x + shape.width / 2;
-      centerY = shape.y + shape.height / 2;
-      const outerRadius = Math.min(shape.width, shape.height) / 2;
-      const innerRadius = outerRadius * 0.4;
-      const points = [];
-      
-      for (let i = 0; i < 10; i++) {
-        const radius = i % 2 === 0 ? outerRadius : innerRadius;
-        const angle = (Math.PI / 5) * i;
-        const x = centerX + radius * Math.sin(angle);
-        const y = centerY - radius * Math.cos(angle);
-        points.push(`${x} ${y}`);
-      }
-      
-      return `M ${points.join(' L ')} Z`;
-      
-    default:
-      return '';
   }
 };

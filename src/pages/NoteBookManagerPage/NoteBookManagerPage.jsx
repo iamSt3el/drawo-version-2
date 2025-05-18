@@ -1,12 +1,14 @@
+// src/pages/NoteBookManagerPage/NoteBookManagerPage.jsx
 import React from 'react'
 import styles from './NoteBookManagePage.module.scss'
 import { useNavigate } from 'react-router-dom'
-import { NoteBookCard } from '../../components/molecules';
+import { NoteBookCard } from '../../components/molecules'; // Make sure this import path is correct
 import { Header } from '../../components/organisms';
-import { useNotebooks } from '../../context/NotebookContextWithFS';
+import { useNotebookStore } from '../../stores/notebookStore';
+
 const NoteBookManagerPage = () => {
   const navigate = useNavigate();
-  const { filteredNotebooks, searchQuery } = useNotebooks();
+  const { filteredNotebooks, searchQuery } = useNotebookStore();
   
   const handleClick = () => {
     navigate('/notebook-interior/1');
@@ -43,7 +45,6 @@ const NoteBookManagerPage = () => {
           </div>
         )}
       </div>
-      
     </div>
   )
 }

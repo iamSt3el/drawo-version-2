@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/SmoothCanvas.jsx - Updated to properly receive and handle mouse events
+// src/components/SmoothCanvas/SmoothCanvas.jsx - Simplified Canvas Component
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { CanvasEngine } from './core/CanvasEngine';
 import { EventHandler } from './core/EventHandler';
@@ -142,13 +142,15 @@ const SmoothCanvas = forwardRef(({
     }
   }, [currentTool, strokeColor, strokeWidth, eraserWidth, sketchyMode, isInitialized]);
 
-  // Method to handle adding shapes
+  // Add a shape to the canvas
   const addShape = (shapeData) => {
     if (!engineRef.current) return null;
     
-    const newPath = engineRef.current.addShape(shapeData);
+    // Add the shape to the engine
+    const newShape = engineRef.current.addShape(shapeData);
     
-    if (newPath) {
+    if (newShape) {
+      // Update paths state
       setPaths([...engineRef.current.getPaths()]);
       
       // Trigger save event
@@ -156,13 +158,13 @@ const SmoothCanvas = forwardRef(({
         onCanvasChange(engineRef.current.exportAsJSON());
       }
       
-      return newPath;
+      return newShape;
     }
     
     return null;
   };
 
-  // Simple load function
+  // Load drawing data from JSON
   const loadDrawingData = (vectorData) => {
     if (!engineRef.current || !vectorData) {
       return false;
@@ -249,7 +251,7 @@ const SmoothCanvas = forwardRef(({
     },
     loadCanvasData: loadDrawingData,
     loadDrawingData: loadDrawingData,
-    addShape: addShape // Expose the addShape method
+    addShape: addShape // Expose addShape method
   }));
 
   const dpr = window.devicePixelRatio || 1;
@@ -327,7 +329,7 @@ const SmoothCanvas = forwardRef(({
         }}
       >
         {/* Main paths */}
-        {rendererRef.current?.renderPaths()}
+        {rendererRef.current?.renderPaths(paths)}
         
         {/* Temporary shape during drawing */}
         {temporaryShape && rendererRef.current?.renderTemporaryShape(temporaryShape)}

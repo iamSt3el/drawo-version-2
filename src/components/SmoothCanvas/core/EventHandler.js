@@ -1,4 +1,4 @@
-// src/components/SmoothCanvas/core/EventHandler.js - Fixed to save input points for vector data
+// src/components/SmoothCanvas/core/EventHandler.js - Fixed to prevent content disappearing with eraser
 import { getStroke } from 'perfect-freehand';
 
 export class EventHandler {
@@ -172,25 +172,49 @@ export class EventHandler {
         const pathObj = paths[i];
         if (currentPathsToErase.has(pathObj.id)) continue;
         
-        if (pathObj.type === 'stroke' && pathObj.pathData) {
-          let bbox = this.engine.pathBBoxes.get(pathObj.id);
-          if (!bbox) {
+        // Get the bounding box for this path/shape
+        let bbox = this.engine.pathBBoxes.get(pathObj.id);
+        if (!bbox) {
+          // If this is a shape, we can create a bbox from its properties
+          if (pathObj.type === 'shape') {
+            if (pathObj.shapeType === 'line') {
+              bbox = {
+                x: Math.min(pathObj.x1, pathObj.x2),
+                y: Math.min(pathObj.y1, pathObj.y2),
+                width: Math.abs(pathObj.x2 - pathObj.x1),
+                height: Math.abs(pathObj.y2 - pathObj.y1)
+              };
+            } else {
+              bbox = {
+                x: pathObj.x,
+                y: pathObj.y,
+                width: pathObj.width,
+                height: pathObj.height
+              };
+            }
+            this.engine.pathBBoxes.set(pathObj.id, bbox);
+          } 
+          // For stroee paths, calculate from path data
+          else if (pathObj.type === 'stroke' && pathObj.pathData) {
             bbox = this.engine.calculateBoundingBox(pathObj.pathData);
             if (bbox) {
               this.engine.pathBBoxes.set(pathObj.id, bbox);
             }
           }
-          
-          if (bbox && this.engine.eraserIntersectsBoundingBox(x, y, eraserRadius, bbox)) {
-            currentPathsToErase.add(pathObj.id);
-          }
+        }
+        
+        if (bbox && this.engine.eraserIntersectsBoundingBox(x, y, eraserRadius, bbox)) {
+          currentPathsToErase.add(pathObj.id);
         }
       }
       
-      this.engine.setPathsToErase(currentPathsToErase);
-      
-      if (this.callbacks.onPathsMarkedForErase) {
-        this.callbacks.onPathsMarkedForErase(currentPathsToErase);
+      // Update paths to erase only if something changed
+      if (currentPathsToErase.size !== this.engine.getPathsToErase().size) {
+        this.engine.setPathsToErase(currentPathsToErase);
+        
+        if (this.callbacks.onPathsMarkedForErase) {
+          this.callbacks.onPathsMarkedForErase(currentPathsToErase);
+        }
       }
     }
 
@@ -198,18 +222,26 @@ export class EventHandler {
       const pathsToErase = this.engine.getPathsToErase();
       
       if (pathsToErase.size > 0) {
+        // Filter out the erased paths from the paths array
         const newPaths = this.engine.getPaths().filter(path => !pathsToErase.has(path.id));
-        this.engine.paths = newPaths;
         
-        pathsToErase.forEach(pathId => {
-          this.engine.pathBBoxes.delete(pathId);
-        });
-        
-        if (this.callbacks.onPathsErased) {
-          this.callbacks.onPathsErased();
+        // ONLY if we actually removed something - FIX for content disappearing
+        if (newPaths.length < this.engine.getPaths().length) {
+          this.engine.paths = newPaths;
+          
+          // Clean up bounding boxes
+          pathsToErase.forEach(pathId => {
+            this.engine.pathBBoxes.delete(pathId);
+          });
+          
+          // Notify about paths being erased
+          if (this.callbacks.onPathsErased) {
+            this.callbacks.onPathsErased();
+          }
         }
       }
       
+      // Reset paths to erase
       this.engine.setPathsToErase(new Set());
     }
 

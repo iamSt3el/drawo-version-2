@@ -1,5 +1,5 @@
 // src/pages/NoteBookInteriorPage/NoteBookInteriorPage.jsx
-// Updated to include both shape drawing utilities and menu functions
+// Complete fixed version with shape drawing functionality
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styles from './NoteBookInteriorPage.module.scss';
@@ -63,13 +63,7 @@ const NoteBookInteriorPage = () => {
   // Menu state
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Handle shape completion - trigger save when a shape is completed
-  const handleShapeComplete = useCallback((shapeData) => {
-    console.log('Shape completed:', shapeData);
-    // This will be handled by the canvas change handler
-  }, []);
-
-  // Use the shape drawing hook
+  // Use custom hook for shape drawing - FIXED VERSION
   const {
     isDrawingShape,
     temporaryShape,
@@ -80,10 +74,12 @@ const NoteBookInteriorPage = () => {
     handleFillToggle,
     handleFillColorChange,
     handleFillOpacityChange,
-    resetShapeDrawing,
-    setShapeProperties
+    resetShapeDrawing
   } = useShapeDrawing({
-    onShapeComplete: handleShapeComplete,
+    onShapeComplete: (shapeData) => {
+      console.log('Shape completed, saving canvas data');
+      // Shape completion will trigger canvas change through addShape
+    },
     canvasRef: notebookUiRef,
     strokeColor,
     strokeWidth,
@@ -191,6 +187,7 @@ const NoteBookInteriorPage = () => {
 
   // Handle tool change from toolbar
   const handleToolChange = (tool) => {
+    console.log('Tool changed to:', tool);
     setCurrentTool(tool);
     setIsPenPanelVisible(tool === 'pen');
     
@@ -358,8 +355,9 @@ const NoteBookInteriorPage = () => {
     }
   };
 
-  // Canvas event handlers for shape drawing
+  // Canvas event handlers for shape drawing - FIXED
   const handleCanvasMouseDownWrapper = (e) => {
+    console.log('Mouse down on canvas with tool:', currentTool);
     handleCanvasMouseDown(e, currentTool);
   };
 
@@ -368,6 +366,7 @@ const NoteBookInteriorPage = () => {
   };
 
   const handleCanvasMouseUpWrapper = (e) => {
+    console.log('Mouse up on canvas with tool:', currentTool);
     handleCanvasMouseUp(e, currentTool);
   };
   
@@ -480,13 +479,7 @@ const NoteBookInteriorPage = () => {
         </div>
 
         {/* Main Canvas Area */}
-        <div 
-          className={styles.notebook_interior_canvas}
-          onMouseDown={handleCanvasMouseDownWrapper}
-          onMouseMove={handleCanvasMouseMoveWrapper}
-          onMouseUp={handleCanvasMouseUpWrapper}
-          onMouseLeave={handleCanvasMouseUpWrapper}
-        >
+        <div className={styles.notebook_interior_canvas}>
           <NoteBookUi
             ref={notebookUiRef}
             currentTool={currentTool}
@@ -502,6 +495,10 @@ const NoteBookInteriorPage = () => {
             key={currentPageNumber}
             initialCanvasData={currentPageData?.canvasData}
             temporaryShape={temporaryShape}
+            onMouseDown={handleCanvasMouseDownWrapper}
+            onMouseMove={handleCanvasMouseMoveWrapper}
+            onMouseUp={handleCanvasMouseUpWrapper}
+            onMouseLeave={handleCanvasMouseUpWrapper}
           />
         </div>
 

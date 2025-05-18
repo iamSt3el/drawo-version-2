@@ -1,4 +1,4 @@
-// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Fixed to prevent save loops during load
+// src/components/molecules/NoteBookUi/NoteBookUi.jsx - Fixed to properly forward the addShape method
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
 import styles from './NoteBookUi.module.scss'
 import SmoothCanvas from '../../SmoothCanvas/SmoothCanvas'
@@ -13,7 +13,12 @@ const NoteBookUi = forwardRef(({
   patternSize = 20,
   patternColor = '#e5e7eb',
   patternOpacity = 50,
-  initialCanvasData = null
+  initialCanvasData = null,
+  temporaryShape = null, // Add support for temporary shape
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onMouseLeave
 }, ref) => {
   const canvasRef = useRef(null);
   const [numberOfHoles, setNumberOfHoles] = useState(25);
@@ -151,8 +156,20 @@ const NoteBookUi = forwardRef(({
 
   const backgroundStyle = generateBackgroundPattern();
 
-  // Expose methods via ref
+  // Add explicit shape handling method to forward to SmoothCanvas
+  const addShape = (shapeData) => {
+    if (canvasRef.current && canvasRef.current.addShape) {
+      console.log('NoteBookUi: Forwarding addShape call to SmoothCanvas', shapeData);
+      return canvasRef.current.addShape(shapeData);
+    } else {
+      console.error('NoteBookUi: SmoothCanvas reference or addShape method not available');
+      return null;
+    }
+  };
+
+  // Expose methods via ref - WITH PROPER FORWARDING OF ALL METHODS
   useImperativeHandle(ref, () => ({
+    // Forward all methods from SmoothCanvas
     clearCanvas: () => {
       if (canvasRef.current) {
         // Don't trigger save during programmatic clear
@@ -207,7 +224,11 @@ const NoteBookUi = forwardRef(({
         }, 100);
       }
     },
-    canvasRef: canvasRef.current
+    // The critical one - forward addShape to SmoothCanvas
+    addShape: addShape,
+    
+    // Important: provide direct access to the canvas ref if needed
+    canvasRef: canvasRef
   }));
 
   return (
@@ -235,6 +256,11 @@ const NoteBookUi = forwardRef(({
           strokeWidth={strokeWidth}
           eraserWidth={eraserWidth}
           onCanvasChange={handleCanvasChange}
+          temporaryShape={temporaryShape}
+          onMouseDown={onMouseDown}
+          onMouseMove={onMouseMove}
+          onMouseUp={onMouseUp}
+          onMouseLeave={onMouseLeave}
         />
       </div>
     </div>

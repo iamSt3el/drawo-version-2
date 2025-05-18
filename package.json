@@ -35,7 +35,8 @@
     "react-router-dom": "^7.6.0",
     "roughjs": "^4.6.6",
     "sass": "^1.88.0",
-    "wait-on": "^8.0.3"
+    "wait-on": "^8.0.3",
+    "zustand": "^5.0.4"
   },
   "eslintConfig": {
     "extends": [
