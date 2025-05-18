@@ -1,6 +1,4 @@
-// Finally, let's update the SmoothCanvas component to handle shape drawing
-// src/components/SmoothCanvas/SmoothCanvas.jsx
-
+// src/components/SmoothCanvas/SmoothCanvas.jsx - Updated to properly receive and handle mouse events
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { CanvasEngine } from './core/CanvasEngine';
 import { EventHandler } from './core/EventHandler';
@@ -15,9 +13,13 @@ const SmoothCanvas = forwardRef(({
   strokeWidth = 5,
   eraserWidth = 10,
   sketchyMode = false,
-  temporaryShape = null, // New prop for temporary shape during drawing
+  temporaryShape = null, // Shape data during drawing
   onCanvasChange,
   backgroundImageUrl = null,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  onMouseLeave
 }, ref) => {
   const canvasRef = useRef(null);
   const svgRef = useRef(null);
@@ -79,7 +81,10 @@ const SmoothCanvas = forwardRef(({
       }
     });
 
-    eventHandler.attachListeners(canvasRef.current);
+    // Only attach internal event handlers for pen and eraser tools
+    if (['pen', 'eraser'].includes(currentTool)) {
+      eventHandler.attachListeners(canvasRef.current);
+    }
 
     engineRef.current = engine;
     eventHandlerRef.current = eventHandler;
@@ -94,7 +99,7 @@ const SmoothCanvas = forwardRef(({
         engineRef.current.destroy();
       }
     };
-  }, [width, height]);
+  }, [width, height, onCanvasChange]);
 
   // Update options when props change
   useEffect(() => {
@@ -123,10 +128,21 @@ const SmoothCanvas = forwardRef(({
         setPathsToErase(new Set());
         setShowEraser(false);
       }
+      
+      // Handle attaching/detaching event listeners based on tool
+      if (eventHandlerRef.current && canvasRef.current) {
+        // First detach any existing listeners
+        eventHandlerRef.current.detachListeners(canvasRef.current);
+        
+        // Reattach only for pen and eraser tools (internal handling)
+        if (['pen', 'eraser'].includes(currentTool)) {
+          eventHandlerRef.current.attachListeners(canvasRef.current);
+        }
+      }
     }
   }, [currentTool, strokeColor, strokeWidth, eraserWidth, sketchyMode, isInitialized]);
 
-  // Add method to handle adding shapes
+  // Method to handle adding shapes
   const addShape = (shapeData) => {
     if (!engineRef.current) return null;
     
@@ -237,6 +253,31 @@ const SmoothCanvas = forwardRef(({
   }));
 
   const dpr = window.devicePixelRatio || 1;
+  
+  // Handle external mouse events for shape drawing
+  const handleMouseDown = (e) => {
+    if (onMouseDown && !['pen', 'eraser'].includes(currentTool)) {
+      onMouseDown(e);
+    }
+  };
+  
+  const handleMouseMove = (e) => {
+    if (onMouseMove && !['pen', 'eraser'].includes(currentTool)) {
+      onMouseMove(e);
+    }
+  };
+  
+  const handleMouseUp = (e) => {
+    if (onMouseUp && !['pen', 'eraser'].includes(currentTool)) {
+      onMouseUp(e);
+    }
+  };
+  
+  const handleMouseLeave = (e) => {
+    if (onMouseLeave && !['pen', 'eraser'].includes(currentTool)) {
+      onMouseLeave(e);
+    }
+  };
 
   return (
     <div
@@ -263,6 +304,10 @@ const SmoothCanvas = forwardRef(({
           zIndex: 2,
           pointerEvents: 'auto'
         }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
       />
 
       {/* SVG for vector drawing */}
