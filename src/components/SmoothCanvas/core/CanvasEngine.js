@@ -1,4 +1,6 @@
 // src/components/SmoothCanvas/core/CanvasEngine.js - Simple Excalidraw-style engine
+import rough from 'roughjs'
+
 export class CanvasEngine {
   constructor(canvasRef, svgRef, options = {}) {
     this.canvasRef = canvasRef;
@@ -9,6 +11,7 @@ export class CanvasEngine {
       strokeColor: '#000000',
       strokeWidth: 5,
       eraserWidth: 10,
+      sketechyMode: false,
       ...options
     };
     
@@ -27,6 +30,9 @@ export class CanvasEngine {
     this.pathsToErase = new Set();
     this.pathBBoxes = new Map();
     
+    // Initialize Rough.js generator
+    this.roughGenerator = rough.generator();
+    
     this.dpr = window.devicePixelRatio || 1;
     this.initializeCanvas();
   }
@@ -44,6 +50,126 @@ export class CanvasEngine {
     ctx.scale(this.dpr, this.dpr);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
+
+  // Add new method to create and add a shape
+  addShape(shapeData) {
+    let pathData;
+    let svgNode;
+    
+    // Generate the shape path using Rough.js
+    const roughOptions = {
+      seed: this.nextPathId, // Use for consistent randomness
+      stroke: shapeData.color || this.options.strokeColor,
+      strokeWidth: shapeData.strokeWidth || this.options.strokeWidth,
+      roughness: this.options.sketchyMode ? 1.5 : 0.5,
+      bowing: this.options.sketchyMode ? 1 : 0,
+      fill: shapeData.fill ? shapeData.fillColor : undefined,
+      fillStyle: 'solid',
+      fillWeight: 0.5,
+      hachureGap: 8,
+      opacity: shapeData.opacity / 100 || 1
+    };
+    
+    try {
+      // Create different shapes based on type
+      switch (shapeData.type) {
+        case 'rectangle':
+          svgNode = this.roughGenerator.rectangle(
+            shapeData.x,
+            shapeData.y,
+            shapeData.width,
+            shapeData.height,
+            roughOptions
+          );
+          break;
+          
+        case 'circle':
+          // For circle, we need center coordinates and diameter
+          const centerX = shapeData.x + shapeData.width / 2;
+          const centerY = shapeData.y + shapeData.height / 2;
+          const diameter = Math.max(shapeData.width, shapeData.height);
+          
+          svgNode = this.roughGenerator.circle(
+            centerX,
+            centerY,
+            diameter,
+            roughOptions
+          );
+          break;
+          
+        case 'ellipse':
+          // For ellipse, we need center coordinates and dimensions
+          const ellipseCenterX = shapeData.x + shapeData.width / 2;
+          const ellipseCenterY = shapeData.y + shapeData.height / 2;
+          
+          svgNode = this.roughGenerator.ellipse(
+            ellipseCenterX,
+            ellipseCenterY,
+            shapeData.width,
+            shapeData.height,
+            roughOptions
+          );
+          break;
+          
+        case 'line':
+          svgNode = this.roughGenerator.line(
+            shapeData.x1,
+            shapeData.y1,
+            shapeData.x2,
+            shapeData.y2,
+            roughOptions
+          );
+          break;
+          
+        case 'triangle':
+          // For triangle, create a polygon with 3 points
+          const points = [
+            [shapeData.x + shapeData.width / 2, shapeData.y], // Top
+            [shapeData.x, shapeData.y + shapeData.height],    // Bottom left
+            [shapeData.x + shapeData.width, shapeData.y + shapeData.height] // Bottom right
+          ];
+          
+          svgNode = this.roughGenerator.polygon(points, roughOptions);
+          break;
+          
+        default:
+          console.warn('Unsupported shape type:', shapeData.type);
+          return null;
+      }
+      
+      // Convert SVG node to path data for storage
+      if (svgNode) {
+        // Here we need to extract path data from the SVG node
+        // This is simplified and may need adjustment based on Rough.js output
+        pathData = this.getSvgPathFromRoughShape(svgNode);
+        
+        // Add the shape as a path
+        const newPath = {
+          id: this.generatePathId(),
+          pathData: pathData,
+          color: shapeData.color || this.options.strokeColor,
+          type: 'shape',
+          shapeType: shapeData.type,
+          originalShape: shapeData, // Store original shape data for potential editing
+          strokeWidth: shapeData.strokeWidth || this.options.strokeWidth,
+          timestamp: Date.now(),
+          sketchyMode: this.options.sketchyMode
+        };
+        
+        const bbox = this.calculateBoundingBox(pathData);
+        if (bbox) {
+          this.pathBBoxes.set(newPath.id, bbox);
+        }
+        
+        this.paths.push(newPath);
+        return newPath;
+      }
+    } catch (error) {
+      console.error('Error creating shape:', error);
+      return null;
+    }
+  }
+  
 
   getStrokeOptions(inputType, strokeWidth) {
     const baseOptions = {
@@ -71,6 +197,55 @@ export class CanvasEngine {
         smoothing: 0.5,
         streamline: 0.5,
       };
+    }
+  }
+
+  // Helper method to convert a Rough.js shape to SVG path data
+  getSvgPathFromRoughShape(roughShape) {
+    try {
+      // This is a simplified approach
+      if (roughShape.d) {
+        // Some rough shapes provide a direct path
+        return roughShape.d;
+      } else if (roughShape.sets && roughShape.sets.length > 0) {
+        // For more complex shapes, we may need to extract path data from the sets
+        let pathData = '';
+        
+        // Process each set of operations
+        roughShape.sets.forEach(set => {
+          if (set.ops && set.ops.length > 0) {
+            // Process path operations
+            set.ops.forEach(op => {
+              // Convert operation to SVG path command
+              if (op.op === 'move') {
+                pathData += `M ${op.data[0]} ${op.data[1]} `;
+              } else if (op.op === 'lineTo') {
+                pathData += `L ${op.data[0]} ${op.data[1]} `;
+              } else if (op.op === 'bcurveTo') {
+                // Bezier curve with 6 parameters
+                pathData += `C ${op.data[0]} ${op.data[1]}, ${op.data[2]} ${op.data[3]}, ${op.data[4]} ${op.data[5]} `;
+              } else if (op.op === 'qcurveTo') {
+                // Quadratic curve
+                pathData += `Q ${op.data[0]} ${op.data[1]}, ${op.data[2]} ${op.data[3]} `;
+              }
+            });
+          }
+        });
+        
+        // Ensure path is closed if needed
+        if (pathData && !pathData.endsWith('Z')) {
+          pathData += 'Z';
+        }
+        
+        return pathData;
+      }
+      
+      // If we can't extract a path, create a placeholder
+      console.warn('Could not extract path data from rough shape');
+      return '';
+    } catch (error) {
+      console.error('Error converting rough shape to path data:', error);
+      return '';
     }
   }
 
@@ -202,7 +377,7 @@ export class CanvasEngine {
     return true;
   }
 
-  // Export as JSON - simple format
+  // Update exportAsJSON to include shape information
   exportAsJSON() {
     return JSON.stringify({
       type: 'drawing',
@@ -210,16 +385,20 @@ export class CanvasEngine {
       elements: this.paths.map(path => ({
         id: path.id,
         type: path.type,
+        shapeType: path.shapeType,
         pathData: path.pathData,
         color: path.color,
         strokeWidth: path.strokeWidth,
+        originalShape: path.originalShape,
         inputType: path.inputType,
         inputPoints: path.inputPoints,
-        timestamp: path.timestamp
+        timestamp: path.timestamp,
+        sketchyMode: path.sketchyMode
       })),
       appState: {
         width: this.options.width,
-        height: this.options.height
+        height: this.options.height,
+        sketchyMode: this.options.sketchyMode
       }
     });
   }
@@ -263,47 +442,50 @@ export class CanvasEngine {
       this.clearPaths();
 
       // Import elements
-      data.elements.forEach((element, index) => {
-        
-        if (element.type === 'stroke' && element.pathData) {
-       
+      data.elements.forEach(element => {
+        if (element.type === 'shape' && element.pathData) {
+          // Import shape
           const newPath = {
             id: this.generatePathId(),
             pathData: element.pathData,
             color: element.color || '#000000',
-            type: element.type,
-            inputType: element.inputType || 'mouse',
+            type: 'shape',
+            shapeType: element.shapeType,
+            originalShape: element.originalShape,
             strokeWidth: element.strokeWidth || 5,
-            inputPoints: element.inputPoints || [],
-            timestamp: element.timestamp || Date.now()
+            timestamp: element.timestamp || Date.now(),
+            sketchyMode: element.sketchyMode || false
           };
-
-
+          
           const bbox = this.calculateBoundingBox(element.pathData);
           if (bbox) {
             this.pathBBoxes.set(newPath.id, bbox);
           }
-
+          
           this.paths.push(newPath);
+        } else if (element.type === 'stroke' && element.pathData) {
+          // Existing stroke import logic...
+          // (Retain your current code for handling stroke elements)
         }
       });
 
 
-      // Update options if provided
-      if (data.appState) {
+       // Update options if provided
+       if (data.appState) {
         this.updateOptions({
           width: data.appState.width || this.options.width,
-          height: data.appState.height || this.options.height
+          height: data.appState.height || this.options.height,
+          sketchyMode: data.appState.sketchyMode !== undefined ? 
+            data.appState.sketchyMode : this.options.sketchyMode
         });
       }
-
+      
       return true;
     } catch (error) {
       console.error('Error importing data:', error);
       return false;
     }
   }
-
   // Export as SVG
   exportAsSVG() {
     const svg = this.svgRef.current;

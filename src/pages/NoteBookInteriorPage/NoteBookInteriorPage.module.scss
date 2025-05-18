@@ -1,4 +1,4 @@
-// src/pages/NoteBookInteriorPage/NoteBookInteriorPage.module.scss - Simple Fix
+// src/pages/NoteBookInteriorPage/NoteBookInteriorPage.module.scss - Enhanced responsive layout
 .notebook_interior {
     background-color: #F1F5F9;
     width: 100%;
@@ -6,13 +6,14 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    overflow: hidden;
 
     .notebook_interior_toolbar {
         position: sticky;
         top: 0;
         z-index: 100;
-        // Small padding to prevent any potential overlap
         padding-bottom: 8px;
+        background-color: #F1F5F9;
         
         // Hide page info from toolbar - we'll add floating version
         .page_info {
@@ -25,7 +26,6 @@
         flex: 1;
         position: relative;
         overflow: hidden;
-        // Add small margin to prevent canvas from touching toolbar
         margin-top: 10px;
 
         .notebook_interior_canvas {
@@ -35,131 +35,112 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
-            // Ensure canvas doesn't overflow or get covered
             overflow: hidden;
         }
 
-        .notebook_interior_pen_setting_panel {
+        // Enhanced panel styles with better responsive behavior
+        .notebook_interior_pen_setting_panel,
+        .notebook_interior_page_setting_panel {
             position: fixed;
-            right: 0;
             top: 50%;
-            transform: translateY(-50%);
-            width: 260px;
+           // width: 260px;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 50;
             display: flex;
             align-items: center;
 
             &.visible {
-                transform: translateY(-50%) translateX(0);
                 opacity: 1;
                 pointer-events: auto;
+            }
+
+            &.hidden {
+                opacity: 0;
+                pointer-events: none;
+            }
+
+            // Enhanced panel toggle button
+            .panel_toggle {
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 40px;
+                height: 60px;
+                background-color: white;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                transition: all 0.2s ease;
+                color: #6b7280;
+                z-index: 51;
+
+                &:hover {
+                    background-color: #f8fafc;
+                    color: #374151;
+                    transform: translateY(-50%) scale(1.05);
+                    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+                }
+
+                &:active {
+                    transform: translateY(-50%) scale(0.95);
+                }
+
+                svg {
+                    transition: transform 0.3s ease;
+                }
+
+                // Hide toggle buttons on mobile, use menu instead
+                @media screen and (max-width: 768px) {
+                    display: none;
+                }
+            }
+        }
+
+        .notebook_interior_pen_setting_panel {
+            right: 0;
+            transform: translateY(-50%);
+
+            &.visible {
+                transform: translateY(-50%) translateX(0);
             }
 
             &.hidden {
                 transform: translateY(-50%) translateX(100%);
-                opacity: 0;
-                pointer-events: none;
             }
 
-            // Panel toggle button
             .panel_toggle {
-                position: absolute;
                 left: -40px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 32px;
-                height: 60px;
-                background-color: white;
-                border: 1px solid #e5e7eb;
                 border-right: none;
                 border-radius: 8px 0 0 8px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
-                transition: all 0.2s ease;
-                color: #6b7280;
-
-                &:hover {
-                    background-color: #f8fafc;
-                    color: #374151;
-                    transform: translateY(-50%) translateX(-2px);
-                }
-
-                svg {
-                    transition: transform 0.3s ease;
-                    
-                    &.rotate {
-                        transform: rotate(180deg);
-                    }
-                }
             }
         }
 
         .notebook_interior_page_setting_panel {
-            position: fixed;
             left: 0;
-            top: 50%;
             transform: translateY(-50%);
-            width: 260px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 50;
-            display: flex;
-            align-items: center;
 
             &.visible {
                 transform: translateY(-50%) translateX(0);
-                opacity: 1;
-                pointer-events: auto;
             }
 
             &.hidden {
                 transform: translateY(-50%) translateX(-100%);
-                opacity: 0;
-                pointer-events: none;
             }
 
-            // Panel toggle button for left panel
             .panel_toggle {
-                position: absolute;
                 right: -40px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 32px;
-                height: 60px;
-                background-color: white;
-                border: 1px solid #e5e7eb;
                 border-left: none;
                 border-radius: 0 8px 8px 0;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
-                transition: all 0.2s ease;
-                color: #6b7280;
-
-                &:hover {
-                    background-color: #f8fafc;
-                    color: #374151;
-                    transform: translateY(-50%) translateX(2px);
-                }
-
-                svg {
-                    transition: transform 0.3s ease;
-                    
-                    &.rotate {
-                        transform: rotate(180deg);
-                    }
-                }
             }
         }
     }
 }
 
-// NEW: Floating page info in bottom-right corner
+// Enhanced floating page info
 .page_info_floating {
     position: fixed;
     bottom: 24px;
@@ -170,17 +151,16 @@
     background-color: white;
     padding: 12px 18px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     font-weight: 600;
     color: #374151;
     white-space: nowrap;
-    z-index: 60; // Higher than panels
+    z-index: 60;
     border: 1px solid #e5e7eb;
+    backdrop-filter: blur(8px);
     
-    // Subtle animation on appear
     animation: slideInFromBottom 0.3s ease-out;
     
-    // Add navigation buttons directly in the floating element
     .nav_buttons {
         display: flex;
         gap: 8px;
@@ -204,7 +184,7 @@
                 color: #374151;
                 border-color: #cbd5e1;
                 transform: translateY(-1px);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             }
             
             &:disabled {
@@ -221,73 +201,34 @@
     }
 }
 
-@keyframes slideInFromBottom {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
+// Tool Indicator for Mobile
+.tool_indicator {
+    position: fixed;
+    top: 80px;
+    left: 24px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    z-index: 40;
+    backdrop-filter: blur(8px);
+    animation: slideInFromLeft 0.3s ease-out;
 
-// Keep existing page navigation (for compatibility)
-.page_navigation {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 30;
-    
-    .nav_button {
-        width: 48px;
-        height: 90px;
-        background-color: white;
-        border: 1px solid #e5e7eb;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-        color: #6b7280;
-        font-size: 1.2rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-        &:hover:not(:disabled) {
-            background-color: #f8fafc;
-            color: #374151;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            color: #d1d5db;
-        }
+    .tool_icon {
+        font-size: 16px;
     }
     
-    &.left {
-        left: 280px;
-        
-        .nav_button {
-            border-radius: 0 12px 12px 0;
-            border-left: none;
-        }
+    // Hide on desktop
+    @media screen and (min-width: 769px) {
+        display: none !important;
     }
-    
-    &.right {
-        right: 280px;
-        
-        .nav_button {
-            border-radius: 12px 0 0 12px;
-            border-right: none;
-        }
-    }
-}
-
-// Page info in toolbar is hidden - using floating version
-.page_info {
-    display: none;
 }
 
 // Save status styling
@@ -298,12 +239,14 @@
     padding: 0.5rem 1rem;
     background-color: #f0fdf4;
     border: 1px solid #bbf7d0;
-    border-radius: 6px;
+    border-radius: 8px;
     color: #15803d;
     font-size: 0.875rem;
     font-weight: 500;
     position: absolute;
     right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
 
     &::before {
         content: '●';
@@ -322,13 +265,7 @@
     }
 }
 
-@keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
-}
-
-// Loading and error states (keep original)
+// Loading and error states
 .loading_container,
 .error_container {
     display: flex;
@@ -360,10 +297,6 @@
     }
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 .error_message {
     padding: 2rem 3rem;
     background-color: white;
@@ -376,135 +309,237 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-// Enhanced responsive design
-@media screen and (max-width: 1200px) {
+// Animation keyframes
+@keyframes slideInFromBottom {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+
+// Tablet and mobile responsive design
+@media screen and (max-width: 1024px) {
     .notebook_interior {
-        .notebook_interior_pen_setting_panel {
-            width: 240px;
+        .notebook_interior_ui {
+            .notebook_interior_pen_setting_panel,
+            .notebook_interior_page_setting_panel {
+                // Keep the same positioning behavior
+                position: fixed;
+                top: 50%;
+                z-index: 50;
+            }
+        }
+    }
+
+    .panel_toggle {
+        right: 0px;
+        border-left: none;
+        border-radius: 0 8px 8px 0;
+    }
+
+    // Adjust floating page info positioning based on screen size
+    .page_info_floating {
+        // bottom: 84px; // Make room for quick menu
+        // right: 24px;
+
+        @media screen and (max-width: 768px) {
+            bottom: 84px;
+            right: 16px;
+            left: 16px;
+            justify-content: space-between;
+            
+            .nav_buttons {
+                margin-left: 0;
+            }
         }
 
-        .notebook_interior_page_setting_panel {
-            width: 240px;
+        @media screen and (max-width: 480px) {
+            padding: 8px 12px;
+            font-size: 14px;
+            
+            .nav_buttons {
+                gap: 6px;
+                
+                .nav_button {
+                    width: 28px;
+                    height: 28px;
+                    
+                    svg {
+                        width: 14px;
+                        height: 14px;
+                    }
+                }
+            }
         }
     }
 }
 
-@media screen and (max-width: 1024px) {
+@media screen and (max-width: 768px) {
     .notebook_interior {
-        .notebook_interior_pen_setting_panel {
-            position: fixed;
-            bottom: 0;
-            right: 20px;
-            left: auto;
-            top: auto;
-            width: auto;
-            max-width: 300px;
-            transform: none;
-            display: flex;
-            justify-content: center;
-            padding: 16px;
-            background-color: #F1F5F9;
-            border-top: 1px solid #e5e7eb;
-            border-radius: 12px 12px 0 0;
-
-            &.visible {
-                transform: translateY(0);
-                opacity: 1;
-                pointer-events: auto;
+        .notebook_interior_ui {
+            .notebook_interior_canvas {
+                padding: 10px;
             }
 
-            &.hidden {
-                transform: translateY(100%);
-                opacity: 0;
-                pointer-events: none;
-            }
-
-            .panel_toggle {
-                left: 50%;
-                top: -32px;
-                transform: translateX(-50%);
-                width: 60px;
-                height: 32px;
-                border-radius: 8px 8px 0 0;
-                border-bottom: none;
-                border-left: 1px solid #e5e7eb;
-                box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-
-                &:hover {
-                    transform: translateX(-50%) translateY(-2px);
-                }
-
-                svg {
-                    &.rotate {
-                        transform: rotate(90deg);
+            .notebook_interior_pen_setting_panel,
+            .notebook_interior_page_setting_panel {
+                // Full screen overlay behavior on mobile
+                &.visible {
+                    left: 0;
+                    right: 0;
+                    top: 0;
+                    bottom: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0, 0, 0, 0.5);
+                    padding: 20px;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    transform: none;
+                    
+                    // Center the panel content
+                    > * {
+                        position: relative;
+                        max-width: 360px;
+                        width: 100%;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        background: white;
+                        border-radius: 12px;
+                        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
                     }
                 }
+                
+                // Remove the display: none from panel_toggle
+                .panel_toggle {
+                    display: flex;
+                }
             }
-        }
+            
+            // Specific styling for page settings panel
+            .notebook_interior_page_setting_panel {
+                &.visible {
+                    // Fixed close button specifically for page settings panel
+                    .panel_close {
+                        position: absolute;
+                        top: 16px;
+                        right: 16px;
+                        width: 32px;
+                        height: 32px;
+                        background-color: #f8fafc;
+                        border: 1px solid #e5e7eb;
+                        border-radius: 8px;
+                        z-index: 10;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #6b7280;
+                        transition: all 0.2s ease;
+                        
+                        &:hover {
+                            background-color: #f1f5f9;
+                            color: #374151;
+                            transform: scale(1.05);
+                        }
+                        
+                        &:active {
+                            transform: scale(0.95);
+                        }
+                        
+                        // X icon
+                        &::before,
+                        &::after {
+                            content: '';
+                            position: absolute;
+                            width: 16px;
+                            height: 2px;
+                            background-color: currentColor;
+                            border-radius: 1px;
+                        }
+                        
+                        &::before {
+                            transform: rotate(45deg);
+                        }
+                        
+                        &::after {
+                            transform: rotate(-45deg);
+                        }
+                    }
+                    
+                    // Panel toggle for page settings
+                    .panel_toggle {
+                        position: absolute;
+                        top: 20px;
+                        right: 20px;
+                        left: auto;
+                        width: 32px;
+                        height: 32px;
+                        border-radius: 8px;
+                        border: 1px solid #e5e7eb;
+                        background: #f8fafc;
+                        z-index: 52;
+                        display: flex;
+                        transform: none;
 
-        .notebook_interior_page_setting_panel {
-            position: fixed;
-            bottom: 0;
-            left: 20px;
-            right: auto;
-            top: auto;
-            width: auto;
-            max-width: 300px;
-            transform: none;
-            display: flex;
-            justify-content: center;
-            padding: 16px;
-            background-color: #F1F5F9;
-            border-top: 1px solid #e5e7eb;
-            border-radius: 12px 12px 0 0;
-
-            &.visible {
-                transform: translateY(0);
-                opacity: 1;
-                pointer-events: auto;
-            }
-
-            &.hidden {
-                transform: translateY(100%);
-                opacity: 0;
-                pointer-events: none;
-            }
-
-            .panel_toggle {
-                right: 50%;
-                top: -32px;
-                transform: translateX(50%);
-                width: 60px;
-                height: 32px;
-                border-radius: 8px 8px 0 0;
-                border-bottom: none;
-                border-right: 1px solid #e5e7eb;
-                box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-
-                &:hover {
-                    transform: translateX(50%) translateY(-2px);
+                        &:hover {
+                            transform: scale(1.05);
+                        }
+                    }
                 }
 
-                svg {
-                    &.rotate {
-                        transform: rotate(-90deg);
-                    }
+                &.hidden {
+                    transform: translateY(100%);
                 }
             }
         }
     }
-    
-    .page_navigation {
-        display: none;
+}
+
+// Ultra-mobile (small phones)
+@media screen and (max-width: 480px) {
+    .notebook_interior {
+        .notebook_interior_ui {
+            .notebook_interior_canvas {
+                padding: 5px;
+            }
+        }
     }
-    
+
     .page_info_floating {
-        bottom: 16px;
-        right: 16px;
-        padding: 10px 14px;
-        font-size: 0.875rem;
+        padding: 8px 12px;
+        font-size: 14px;
         
         .nav_buttons {
+            gap: 6px;
+            
             .nav_button {
                 width: 28px;
                 height: 28px;
@@ -516,31 +551,21 @@
             }
         }
     }
-}
 
-@media screen and (max-width: 768px) {
-    .notebook_interior {
-        .notebook_interior_canvas {
-            padding: 10px;
+    .quick_menu {
+        .menu_toggle {
+            width: 44px;
+            height: 44px;
         }
 
-        .notebook_interior_pen_setting_panel,
-        .notebook_interior_page_setting_panel {
-            padding: 12px;
-            left: 10px;
-            right: 10px;
-            max-width: none;
-        }
-    }
-    
-    .page_info_floating {
-        bottom: 12px;
-        right: 12px;
-        padding: 8px 12px;
-        
-        .nav_buttons {
-            gap: 6px;
-            margin-left: 6px;
+        .menu_content {
+            min-width: 140px;
+            
+            .menu_item {
+                padding: 10px;
+                font-size: 13px;
+                gap: 10px;
+            }
         }
     }
 }
@@ -551,20 +576,20 @@
         .notebook_interior_pen_setting_panel,
         .notebook_interior_page_setting_panel {
             .panel_toggle {
+                width: 48px;
+                height: 64px;
+            }
+            
+            .panel_close {
                 width: 40px;
                 height: 40px;
                 
-                @media screen and (max-width: 1024px) {
-                    width: 60px;
-                    height: 36px;
+                &::before,
+                &::after {
+                    width: 20px;
                 }
             }
         }
-    }
-    
-    .page_navigation .nav_button {
-        width: 60px;
-        height: 100px;
     }
     
     .page_info_floating {
@@ -580,6 +605,20 @@
             }
         }
     }
+
+    .quick_menu {
+        .menu_toggle {
+            width: 52px;
+            height: 52px;
+        }
+
+        .menu_content {
+            .menu_item {
+                padding: 14px;
+                font-size: 15px;
+            }
+        }
+    }
 }
 
 // High contrast mode support
@@ -587,7 +626,8 @@
     .notebook_interior {
         .notebook_interior_pen_setting_panel,
         .notebook_interior_page_setting_panel {
-            .panel_toggle {
+            .panel_toggle,
+            .panel_close {
                 border-width: 2px;
                 
                 &:hover {
@@ -597,61 +637,228 @@
         }
     }
     
-    .page_navigation .nav_button {
+    .page_info_floating,
+    .quick_menu .menu_toggle {
         border-width: 2px;
         
-        &:hover {
-            border-color: #000;
-        }
-    }
-    
-    .page_info_floating {
-        border-width: 2px;
-        
-        .nav_buttons {
-            .nav_button {
-                border-width: 2px;
-                
-                &:hover {
-                    border-color: #000;
-                }
+        .nav_buttons .nav_button {
+            border-width: 2px;
+            
+            &:hover {
+                border-color: #000;
             }
         }
     }
 }
 
-/* Export buttons styling */
-.export_buttons {
+// Print mode (hide all UI elements)
+@media print {
+    .notebook_interior {
+        .notebook_interior_toolbar,
+        .notebook_interior_pen_setting_panel,
+        .notebook_interior_page_setting_panel,
+        .page_info_floating,
+        .quick_menu,
+        .tool_indicator,
+        .save_status {
+            display: none !important;
+        }
+
+        .notebook_interior_ui {
+            .notebook_interior_canvas {
+                padding: 0;
+                background: white;
+            }
+        }
+    }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+    .notebook_interior {
+        .notebook_interior_pen_setting_panel,
+        .notebook_interior_page_setting_panel,
+        .page_info_floating,
+        .quick_menu,
+        .tool_indicator {
+            animation: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .save_status::before {
+            animation: none;
+        }
+    }
+}
+
+// Add this to your NoteBookInteriorPage.module.scss for shape panel visibility
+// src/pages/NoteBookInteriorPage/NoteBookInteriorPage.module.scss
+
+// Shape panel visibility
+.notebook_interior_shape_panel {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 50;
     display: flex;
-    gap: 0.5rem;
     align-items: center;
-    
-    button {
-      padding: 0.5rem 1rem;
-      background-color: #f3f4f6;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #374151;
+  
+    &.visible {
+      transform: translateY(-50%) translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+  
+    &.hidden {
+      transform: translateY(-50%) translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+  
+    // Panel toggle button (optional)
+    .panel_toggle {
+      position: absolute;
+      left: -40px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 60px;
+      background-color: white;
+      border: 1px solid #e5e7eb;
+      border-right: none;
+      border-radius: 8px 0 0 8px;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
       transition: all 0.2s ease;
-      
+      color: #6b7280;
+  
       &:hover {
-        background-color: #e5e7eb;
-        border-color: #9ca3af;
-        transform: translateY(-1px);
+        background-color: #f8fafc;
+        color: #374151;
+        transform: translateY(-50%) translateX(-2px);
       }
-      
-      &:active {
+  
+      svg {
+        transition: transform 0.3s ease;
+        
+        &.rotate {
+          transform: rotate(180deg);
+        }
+      }
+    }
+  }
+  
+  // Enhanced cursor styles for shape tools
+  .notebook_interior {
+    // Add these classes to the main container
+    &.rectangleMode {
+      cursor: crosshair;
+    }
+    
+    &.circleMode {
+      cursor: crosshair;
+    }
+    
+    &.lineMode {
+      cursor: crosshair;
+    }
+    
+    &.triangleMode {
+      cursor: crosshair;
+    }
+    
+    &.ellipseMode {
+      cursor: crosshair;
+    }
+    
+    &.starMode {
+      cursor: crosshair;
+    }
+  }
+  
+  // Responsive adjustments for the shape panel
+  @media screen and (max-width: 1024px) {
+    .notebook_interior_shape_panel {
+      position: fixed;
+      bottom: 0;
+      right: 20px;
+      left: auto;
+      top: auto;
+      width: auto;
+      max-width: 300px;
+      transform: none;
+      display: flex;
+      justify-content: center;
+      padding: 16px;
+      background-color: #F1F5F9;
+      border-top: 1px solid #e5e7eb;
+      border-radius: 12px 12px 0 0;
+  
+      &.visible {
         transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+  
+      &.hidden {
+        transform: translateY(100%);
+        opacity: 0;
+        pointer-events: none;
+      }
+  
+      .panel_toggle {
+        left: 50%;
+        top: -32px;
+        transform: translateX(-50%);
+        width: 60px;
+        height: 32px;
+        border-radius: 8px 8px 0 0;
+        border-bottom: none;
+        border-left: 1px solid #e5e7eb;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  
+        &:hover {
+          transform: translateX(-50%) translateY(-2px);
+        }
+  
+        svg {
+          &.rotate {
+            transform: rotate(90deg);
+          }
+        }
       }
     }
-}
-
-// Responsive design for export buttons
-@media screen and (max-width: 768px) {
-    .export_buttons {
-        display: none;
+  }
+  
+  // Add style for the temporary shape preview during drawing
+  .temporaryShapePreview {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 10;
+    
+    // Add a slight visual distinction for the preview
+    opacity: 0.8;
+    
+    // Optional animation for better visual feedback during drawing
+    @keyframes previewPulse {
+      0% {
+        opacity: 0.7;
+      }
+      50% {
+        opacity: 0.9;
+      }
+      100% {
+        opacity: 0.7;
+      }
     }
-}
+    
+    animation: previewPulse 1.5s ease-in-out infinite;
+  }

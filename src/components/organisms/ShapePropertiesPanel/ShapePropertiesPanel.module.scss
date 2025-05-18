@@ -1,0 +1,281 @@
+.shapePropertiesPanel {
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    width: 240px;
+    overflow-y: auto;
+    max-height: 90vh;
+    
+    .sectionHeader {
+      text-align: center;
+      border-bottom: 1px solid #f3f4f6;
+      padding: 1rem 1.5rem;
+      
+      h3 {
+        margin: 0;
+        color: #374151;
+        font-size: 1.25rem;
+        font-weight: 600;
+      }
+    }
+    
+    .section {
+      padding: 1rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-bottom: 1px solid #f3f4f6;
+      
+      &:last-child {
+        border-bottom: none;
+      }
+      
+      .sectionTitle {
+        font-weight: 600;
+        color: #374151;
+        font-size: 0.95rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        
+        .valueDisplay {
+          color: #8b5cf6;
+          font-weight: 700;
+          font-size: 0.9rem;
+        }
+      }
+    }
+    
+    // Toggle switch for fill
+    .toggleSwitch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 24px;
+      
+      input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+        
+        &:checked + .toggleSlider {
+          background-color: #8b5cf6;
+          
+          &:before {
+            transform: translateX(16px);
+          }
+        }
+        
+        &:focus + .toggleSlider {
+          box-shadow: 0 0 1px #8b5cf6;
+        }
+      }
+    }
+    
+    .toggleSlider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+      
+      &:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+    }
+    
+    // Color grid for fill color
+    .colorGrid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      
+      .colorOption {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        &.active {
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+        }
+      }
+    }
+    
+    // Opacity slider and preview
+    .opacityCover {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      
+      .opacitySlider {
+        width: 100%;
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(to right, #e5e7eb 0%, #8b5cf6 100%);
+        outline: none;
+        -webkit-appearance: none;
+        cursor: pointer;
+        
+        &::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: white;
+          border: 2px solid #8b5cf6;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+          transition: all 0.2s ease;
+          
+          &:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.6);
+          }
+        }
+        
+        &::-moz-range-thumb {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: white;
+          border: 2px solid #8b5cf6;
+          cursor: pointer;
+          box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
+        }
+      }
+      
+      .opacityPreview {
+        display: flex;
+        justify-content: center;
+        padding: 8px;
+        
+        .opacitySample {
+          width: 60px;
+          height: 40px;
+          border-radius: 8px;
+          border: 1px solid #e5e7eb;
+          background-image: 
+            linear-gradient(45deg, #f0f0f0 25%, transparent 25%), 
+            linear-gradient(-45deg, #f0f0f0 25%, transparent 25%), 
+            linear-gradient(45deg, transparent 75%, #f0f0f0 75%), 
+            linear-gradient(-45deg, transparent 75%, #f0f0f0 75%);
+          background-size: 10px 10px;
+          background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+          position: relative;
+          
+          &::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 8px;
+            background-color: inherit;
+          }
+        }
+      }
+    }
+    
+    // Keyboard shortcuts section
+    .shortcutsList {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      
+      .shortcutItem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: #4b5563;
+        
+        .shortcutKey {
+          background-color: #f3f4f6;
+          border-radius: 4px;
+          padding: 2px 6px;
+          font-weight: 600;
+          color: #374151;
+          font-size: 0.75rem;
+          min-width: 36px;
+          text-align: center;
+          border: 1px solid #e5e7eb;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        
+        .shortcutDesc {
+          flex: 1;
+        }
+      }
+    }
+  }
+  
+  // Responsive adjustments
+  @media (max-width: 768px) {
+    .shapePropertiesPanel {
+      width: 100%;
+      max-width: 300px;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      max-height: 60vh;
+      
+      .sectionHeader {
+        padding: 0.75rem 1rem;
+        
+        h3 {
+          font-size: 1.125rem;
+        }
+      }
+      
+      .section {
+        padding: 0.75rem 1rem;
+        gap: 10px;
+      }
+      
+      .colorGrid {
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+        
+        .colorOption {
+          width: 24px;
+          height: 24px;
+        }
+      }
+      
+      .shortcutItem {
+        font-size: 0.8125rem;
+        
+        .shortcutKey {
+          font-size: 0.6875rem;
+          min-width: 32px;
+          padding: 1px 4px;
+        }
+      }
+    }
+  }

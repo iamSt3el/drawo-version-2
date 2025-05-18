@@ -1,27 +1,17 @@
 // src/components/molecules/ToolBar/ToolBar.module.scss
+// Combined with your menu structure and shape tools dropdown
+
 .toolbar_cover {
   display: flex;
-  
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
   position: relative;
 
-  .toolbar_back_button {
-    position: absolute;
-    left: 1rem;
-    top: 1rem;
-    background-color: #f8fafc;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
-    transition: all 0.3s ease-in-out;
-    cursor: pointer;
-  }
-
   .toolbar_tools_cover {
     display: inline-flex;
     padding: 1rem;
+    position: relative;
 
     .toolbar_tools {
       display: flex;
@@ -32,139 +22,258 @@
       border-radius: 0.5rem;
       box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
       transition: all 0.3s ease-in-out;
-      cursor: pointer;
       flex-wrap: wrap;
       max-width: 80vw;
-      //justify-content: center;
     }
   }
 }
 
-// Color picker styles
-.color_picker_container {
-  position: relative;
-}
-
-.color_picker {
+// Quick menu styles - preserved from your code
+.quick_menu {
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-top: 10px;
-  background: white;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
-  z-index: 1000;
-
-  .color_grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-    
-    .color_option {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      cursor: pointer;
-      border: 2px solid transparent;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        transform: scale(1.1);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      }
-      
-      &.active {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-      }
-    }
-  }
-}
-
-
-.navigation_tools{
-  position: absolute;
-  right: 1rem;
+  left: 1rem;
+  top: 1rem;
+  z-index: 100;
   
-
-  display: flex;
-  gap: 1rem;
-  align-items:flex-end;
-  padding: 0.5rem 1rem;
-  background-color: #f8fafc;
-  border-radius: 0.5rem;
-  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
-  transition: all 0.3s ease-in-out;
-  cursor: pointer;
-  flex-wrap: wrap;
-  max-width: 80vw;
-  
-}
-
-// Stroke width control styles
-.stroke_width_container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  
-  .stroke_width_label {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-    white-space: nowrap;
-  }
-  
-  .stroke_width_slider {
-    width: 80px;
-    height: 4px;
-    border-radius: 2px;
-    background: #e5e7eb;
-    outline: none;
-    -webkit-appearance: none;
+  .menu_toggle {
+    width: 40px;
+    height: 40px;
+    background-color: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
+    box-shadow: rgba(0, 0, 0, 0.19) 0px 4px 10px, rgba(0, 0, 0, 0.23) 0px 2px 3px;
+    transition: all 0.2s ease;
     
-    &::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #3b82f6;
+    &:hover {
+      background-color: #f1f5f9;
+      transform: translateY(-2px);
+    }
+  }
+  
+  &.visible .menu_toggle {
+    background-color: #e5e7eb;
+  }
+  
+  .menu_content {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    width: 180px;
+    overflow: hidden;
+    animation: slideDown 0.2s ease;
+    z-index: 110;
+    border: 1px solid #e5e7eb;
+    
+    .menu_item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      width: 100%;
+      border: none;
+      background: transparent;
+      text-align: left;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
-      transition: all 0.2s ease;
+      transition: background 0.2s ease;
+      color: #374151;
       
       &:hover {
-        transform: scale(1.2);
+        background-color: #f3f4f6;
+      }
+      
+      span {
+        font-size: 14px;
       }
     }
     
-    &::-moz-range-thumb {
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #3b82f6;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    .menu_divider {
+      height: 1px;
+      background-color: #e5e7eb;
+      margin: 4px 0;
     }
   }
 }
 
-// Responsive design
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Enhanced toolbar section with dropdown
+.toolbar_section {
+  position: relative;
+  display: inline-block;
+  
+  // Animation for dropdown appearance
+  @keyframes dropdownAppear {
+    from {
+      opacity: 0;
+      transform: translateY(-10px) translateX(-50%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) translateX(-50%);
+    }
+  }
+  
+  // Enhanced dropdown with better positioning and animation
+  .tools_dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #f8fafc;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    min-width: 220px;
+    border: 1px solid #e5e7eb;
+    animation: dropdownAppear 0.2s ease-out;
+    
+    // Arrow pointer at the top of dropdown
+    &::before {
+      content: '';
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-bottom: 8px solid #f8fafc;
+      z-index: 2;
+    }
+    
+    // Shadow for the arrow
+    &::after {
+      content: '';
+      position: absolute;
+      top: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-bottom: 9px solid rgba(0, 0, 0, 0.1);
+      z-index: 1;
+    }
+  }
+}
+
+// Button styles combining existing and new dropdown features
+.button {
+  //height: 52px;
+  //width: 72px;
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 20%;
+  cursor: pointer;
+  box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease-in-out;
+
+  &:hover {
+    box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+    transform: scale(1.1);
+    background-color: #9FB3DF;
+  }
+
+  &.active {
+    background-color: #9FB3DF;
+    color: white;
+    border-color: #9FB3DF;
+
+    .icon {
+      color: white;
+    }
+  }
+
+  .icon {
+    color: black;
+    width: 34px;
+    height: 34px;
+    transition: color 0.3s ease-in-out;
+    transform: rotate(360deg);
+  }
+
+  .icon:hover{
+    transform: rotate(360deg);
+  }
+  
+  // Dropdown indicator
+  &.hasDropdown {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 6px;
+      width: 8px;
+      height: 4px;
+      background-color: currentColor;
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+      opacity: 0.5;
+      transition: opacity 0.2s ease;
+    }
+    
+    &:hover::after {
+      opacity: 0.8;
+    }
+    
+    &.active::after {
+      opacity: 1;
+    }
+  }
+  
+  // Show which shape is active
+  &.shapeActive {
+    position: relative;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #3b82f6;
+    }
+  }
+}
+
+// Overlay to detect clicks outside dropdown
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 99;
+  cursor: default;
+}
+
+// Responsive styles for mobile devices
 @media screen and (max-width: 768px) {
   .toolbar_cover {
-    .toolbar_back_button {
-      left: 0.5rem;
-      top: 0.5rem;
-      padding: 0.25rem 0.5rem;
-    }
-    
     .toolbar_tools_cover {
       padding: 0.5rem;
       
@@ -174,22 +283,38 @@
         max-width: 95vw;
       }
     }
-  }
-  
-  .stroke_width_container {
-    padding: 0 8px;
     
-    .stroke_width_slider {
-      width: 60px;
-    }
-  }
-  
-  .color_picker {
-    .color_grid {
-      .color_option {
-        width: 28px;
-        height: 28px;
+    .quick_menu {
+      left: 0.5rem;
+      top: 0.5rem;
+      
+      .menu_toggle {
+        width: 36px;
+        height: 36px;
+      }
+      
+      .menu_content {
+        width: 160px;
       }
     }
   }
+  
+  .toolbar_section {
+    .tools_dropdown {
+      grid-template-columns: repeat(3, 1fr);
+      min-width: 180px;
+      gap: 6px;
+      padding: 8px;
+    }
+  }
 }
+
+// Tool-specific cursor styles
+.rectangleMode { cursor: crosshair; }
+.circleMode { cursor: crosshair; }
+.ellipseMode { cursor: crosshair; }
+.lineMode { cursor: crosshair; }
+.triangleMode { cursor: crosshair; }
+.starMode { cursor: crosshair; }
+.penMode { cursor: crosshair; }
+.eraserMode { cursor: none; } // Custom cursor will be used

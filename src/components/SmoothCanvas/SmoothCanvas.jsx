@@ -1,4 +1,6 @@
-// src/components/SmoothCanvas/SmoothCanvas.jsx - Simple Excalidraw-style implementation
+// Finally, let's update the SmoothCanvas component to handle shape drawing
+// src/components/SmoothCanvas/SmoothCanvas.jsx
+
 import React, { useRef, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import { CanvasEngine } from './core/CanvasEngine';
 import { EventHandler } from './core/EventHandler';
@@ -12,6 +14,8 @@ const SmoothCanvas = forwardRef(({
   strokeColor = '#000000',
   strokeWidth = 5,
   eraserWidth = 10,
+  sketchyMode = false,
+  temporaryShape = null, // New prop for temporary shape during drawing
   onCanvasChange,
   backgroundImageUrl = null,
 }, ref) => {
@@ -36,19 +40,21 @@ const SmoothCanvas = forwardRef(({
       height,
       strokeColor,
       strokeWidth,
-      eraserWidth
+      eraserWidth,
+      sketchyMode
     });
 
     const eventHandler = new EventHandler(engine, {
       currentTool,
       strokeColor,
       strokeWidth,
-      eraserWidth
+      eraserWidth,
+      sketchyMode
     });
 
     const renderer = new CanvasRenderer(engine);
 
-    // Simple callbacks - trigger save on any change
+    // Set callbacks
     eventHandler.setCallbacks({
       onStrokeComplete: () => {
         setPaths([...engine.getPaths()]);
@@ -98,7 +104,8 @@ const SmoothCanvas = forwardRef(({
         height,
         strokeColor,
         strokeWidth,
-        eraserWidth
+        eraserWidth,
+        sketchyMode
       });
 
       eventHandlerRef.current.options = {
@@ -106,7 +113,8 @@ const SmoothCanvas = forwardRef(({
         currentTool,
         strokeColor,
         strokeWidth,
-        eraserWidth
+        eraserWidth,
+        sketchyMode
       };
 
       engineRef.current.isErasing = currentTool === 'eraser';
@@ -116,38 +124,48 @@ const SmoothCanvas = forwardRef(({
         setShowEraser(false);
       }
     }
-  }, [currentTool, strokeColor, strokeWidth, eraserWidth, isInitialized]);
+  }, [currentTool, strokeColor, strokeWidth, eraserWidth, sketchyMode, isInitialized]);
+
+  // Add method to handle adding shapes
+  const addShape = (shapeData) => {
+    if (!engineRef.current) return null;
+    
+    const newPath = engineRef.current.addShape(shapeData);
+    
+    if (newPath) {
+      setPaths([...engineRef.current.getPaths()]);
+      
+      // Trigger save event
+      if (onCanvasChange && isInitialized) {
+        onCanvasChange(engineRef.current.exportAsJSON());
+      }
+      
+      return newPath;
+    }
+    
+    return null;
+  };
 
   // Simple load function
   const loadDrawingData = (vectorData) => {
-
-    
     if (!engineRef.current || !vectorData) {
-    
       return false;
     }
-    
-
     
     try {
       // Temporarily disable callbacks to prevent save during load
       setIsInitialized(false);
       
-      
       const success = engineRef.current.importFromJSON(vectorData);
-    
       
       if (success) {
         const currentPaths = engineRef.current.getPaths();
-  
-        
         setPaths([...currentPaths]);
-      
       }
+      
       // Re-enable callbacks after a short delay
       setTimeout(() => {
         setIsInitialized(true);
-    
       }, 100);
       
       return success;
@@ -214,7 +232,8 @@ const SmoothCanvas = forwardRef(({
       return false;
     },
     loadCanvasData: loadDrawingData,
-    loadDrawingData: loadDrawingData
+    loadDrawingData: loadDrawingData,
+    addShape: addShape // Expose the addShape method
   }));
 
   const dpr = window.devicePixelRatio || 1;
@@ -262,8 +281,11 @@ const SmoothCanvas = forwardRef(({
           zIndex: 1
         }}
       >
-        {/* Debug: Show how many paths we have */}
+        {/* Main paths */}
         {rendererRef.current?.renderPaths()}
+        
+        {/* Temporary shape during drawing */}
+        {temporaryShape && rendererRef.current?.renderTemporaryShape(temporaryShape)}
       </svg>
 
       {/* Eraser cursor */}
